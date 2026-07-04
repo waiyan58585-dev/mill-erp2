@@ -1,0 +1,21 @@
+{
+  "name": "react",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "lucide-react": "^1.23.0",
+    "react": "16.13.1",
+    "react-dom": "16.13.1"
+  },
+  "scripts": {
+    "build:tailwind": "tailwindcss build src/tailwind.css -o src/tailwind.generated.css",
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  },
+  "devDependencies": {
+    "react-scripts": "latest"
+  }
+}
