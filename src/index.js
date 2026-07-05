@@ -10,7 +10,7 @@ import {
 // ==========================================
 // မဖြစ်မနေ ပြင်ဆင်ရန် (Supabase API Keys)
 // ==========================================
-const supabaseUrl = 'https://jgerimrkigxtphjcrafq.supabase.co/rest/v1/';
+const supabaseUrl = 'https://jgerimrkigxtphjcrafq.supabase.co';
 const supabaseKey = 'sb_publishable_2jhGRP_tFpR9xuPgJEBBxA_2_HRJTUG';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
