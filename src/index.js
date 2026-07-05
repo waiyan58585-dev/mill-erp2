@@ -4,13 +4,13 @@ import { createClient } from '@supabase/supabase-js';
 import { 
   Home, Tractor, ScanLine, Package, Calculator, Users,
   Plus, ArrowRight, CheckCircle, Droplets, Wind,
-  Receipt, Search, ChevronDown, ChevronUp, X, MapPin, Factory, ArrowDownToLine, Trash2, Edit3, Lock, LogOut
+  Receipt, Search, ChevronDown, ChevronUp, X, MapPin, Factory, ArrowDownToLine, Trash2, Edit3, Lock, LogOut, AlertCircle
 } from 'lucide-react';
 
 // ==========================================
 // မဖြစ်မနေ ပြင်ဆင်ရန် (Supabase API Keys)
 // ==========================================
-const supabaseUrl = 'https://jgerimrkigxtphjcrafq.supabase.co'; // အစ်ကို့ URL အစစ်ကို အစားထိုးပါ
+const supabaseUrl = 'https://jgerimrkigxtphjcrafq.supabase.co'; // အစ်ကို့ URL အစစ် (နောက်ဆုံးတွင် / မပါပါ)
 const supabaseKey = 'sb_publishable_2jhGRP_tFpR9xuPgJEBBxA_2_HRJTUG'; // eyJhbG ဖြင့်စသော အစ်ကို့ Key အစစ်ကို အစားထိုးပါ
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -22,6 +22,9 @@ export default function MillERP() {
   const [userRole, setUserRole] = useState(null); // null, 'admin', 'gate', 'mill'
   const [pinInput, setPinInput] = useState('');
   
+  // --- Custom Dialog State (Replaces alert & confirm) ---
+  const [dialogConfig, setDialogConfig] = useState(null); // { type: 'alert' | 'confirm', message: string, onConfirm?: function }
+
   // --- Navigation State ---
   const [activeView, setActiveView] = useState('gate'); 
 
@@ -92,6 +95,26 @@ export default function MillERP() {
     await supabase.from('customers').upsert({ name, remark });
   };
 
+  // Custom Dialog Helper Functions
+  const showMessage = (msg) => {
+    setDialogConfig({ type: 'alert', message: msg });
+  };
+
+  const showConfirm = (msg, onConfirm) => {
+    setDialogConfig({ type: 'confirm', message: msg, onConfirm });
+  };
+
+  // Global Delete Function
+  const handleDeleteJob = (jobId) => {
+    showConfirm(`ဘောက်ချာ No: ${jobId} အား အပြီးတိုင် ပယ်ဖျက်မှာ သေချာပါသလား?`, async () => {
+      setDialogConfig(null);
+      setIsLoading(true);
+      await supabase.from('jobs').delete().eq('id', jobId);
+      setIsLoading(false);
+      showMessage('စာရင်း ဖျက်သိမ်းပြီးပါပြီ။');
+    });
+  };
+
   const getSortingLabels = (type) => {
     const t = (type || '').toLowerCase();
     if(t.includes('ကောက်ညှင်း')) return ['ကောက်ညှင်း (အချော)', 'အကြမ်းဆန် (By-product)', 'ကောက်ညှင်း (Reject)'];
@@ -106,7 +129,7 @@ export default function MillERP() {
     if (pinInput === '9999') { setUserRole('admin'); setActiveView('admin'); } // Admin
     else if (pinInput === '1111') { setUserRole('gate'); setActiveView('gate'); } // စပါးတာဝန်ခံ
     else if (pinInput === '2222') { setUserRole('mill'); setActiveView('milling'); } // ဆန်တာဝန်ခံ
-    else alert('PIN နံပါတ် မှားယွင်းနေပါသည်။');
+    else showMessage('PIN နံပါတ် မှားယွင်းနေပါသည်။');
     setPinInput('');
   };
 
@@ -122,7 +145,22 @@ export default function MillERP() {
 
   if (!userRole) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-900 font-sans">
+      <div className="flex items-center justify-center h-screen bg-slate-900 font-sans relative">
+        {/* Render Custom Dialog over login if needed */}
+        {dialogConfig && (
+          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="p-8 text-center">
+                   <AlertCircle size={48} className="mx-auto text-amber-500 mb-4" />
+                   <p className="text-lg font-bold text-slate-800 mb-8">{dialogConfig.message}</p>
+                   <button onClick={() => setDialogConfig(null)} className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-lg shadow-md transition-colors">
+                      အိုကေ
+                   </button>
+                </div>
+             </div>
+          </div>
+        )}
+
         <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-300">
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -162,7 +200,7 @@ export default function MillERP() {
   const renderGateView = () => {
     const handleAddJob = async (e) => {
       e.preventDefault();
-      if(!newJob.customer || !newJob.qty || !newJob.paddyType) return alert("အချက်အလက်များ ပြည့်စုံစွာ ထည့်ပါ။");
+      if(!newJob.customer || !newJob.qty || !newJob.paddyType) return showMessage("အချက်အလက်များ ပြည့်စုံစွာ ထည့်ပါ။");
       setIsLoading(true);
 
       const d = new Date(newJob.date);
@@ -184,17 +222,17 @@ export default function MillERP() {
       };
       
       const { error } = await supabase.from('jobs').insert([jobData]);
-      if (error) alert("Database Error: " + error.message);
+      if (error) showMessage("Database Error: " + error.message);
       else {
         setNewJob({ ...newJob, customer: '', paddyType: '', qty: '', storage: '' });
-        alert("စာရင်းသွင်းပြီးပါပြီ။ ID: " + newJobId);
+        showMessage("စာရင်းသွင်းပြီးပါပြီ။ ID: " + newJobId);
       }
       setIsLoading(false);
     };
 
     const handleSendToDryer = async (jobId) => {
       const isValid = dryingAllocations.every(a => a.machine && a.qty > 0);
-      if(!isValid || dryingAllocations.length === 0) return alert("စက်အမည် နှင့် တင်းအရေအတွက် ထည့်ပါ။");
+      if(!isValid || dryingAllocations.length === 0) return showMessage("စက်အမည် နှင့် တင်းအရေအတွက် ထည့်ပါ။");
       setIsLoading(true);
       await supabase.from('jobs').update({ status: 'drying', dryingMachines: dryingAllocations }).eq('id', jobId);
       setActiveJobId(null);
@@ -202,7 +240,7 @@ export default function MillERP() {
     };
 
     const handleDryingDone = async (job, nextStatusAction) => {
-      if(!dryQtyInput || !dryStorageInput) return alert("ကျန်ရှိတင်း နှင့် သိုလှောင်ရုံနေရာ ထည့်ပါ။");
+      if(!dryQtyInput || !dryStorageInput) return showMessage("ကျန်ရှိတင်း နှင့် သိုလှောင်ရုံနေရာ ထည့်ပါ။");
       
       let nextStatus = '';
       if (job.purpose === 'dry_only') nextStatus = 'ready_to_bill';
@@ -217,7 +255,7 @@ export default function MillERP() {
       setIsLoading(false);
       
       if(nextStatus === 'ready_to_bill_advance') {
-        alert("အခြောက်ခံခ ဘေလ်ကြိုဖွင့်ရန် ငွေစာရင်းဌာနသို့ ပို့ဆောင်ပြီးပါပြီ။");
+        showMessage("အခြောက်ခံခ ဘေလ်ကြိုဖွင့်ရန် ငွေစာရင်းဌာနသို့ ပို့ဆောင်ပြီးပါပြီ။");
       }
     };
 
@@ -269,16 +307,22 @@ export default function MillERP() {
               {jobs.filter(j => j.status === 'waiting_dry').map(job => (
                 <div key={job.id} className="bg-white p-5 rounded-xl border border-amber-100 shadow-sm">
                   <div className="flex justify-between items-start mb-4">
-                    <div><span className="font-black text-slate-800 block text-lg">{job.customer}</span><span className="text-sm font-semibold text-slate-500 mt-1 block">{job.id} • {job.paddyType} <span className="text-amber-600">({job.currentQty} တင်း)</span></span></div>
-                    <div className="text-right"><span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded font-bold uppercase block mb-1">စောင့်ဆိုင်းဆဲ</span></div>
+                    <div>
+                      <span className="font-black text-slate-800 block text-lg">{job.customer}</span>
+                      <span className="text-sm font-semibold text-slate-500 mt-1 block">{job.id} • {job.paddyType} <span className="text-amber-600">({job.currentQty} တင်း)</span></span>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                       <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded font-bold uppercase block">စောင့်ဆိုင်းဆဲ</span>
+                       <button onClick={() => handleDeleteJob(job.id)} className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-200" title="ပယ်ဖျက်မည်"><Trash2 size={16} /></button>
+                    </div>
                   </div>
                   {activeJobId === job.id + '-todry' ? (
                     <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-slate-100">
                       {dryingAllocations.map((alloc, idx) => (
                         <div key={idx} className="flex gap-2">
-                          <input type="text" list="dryingMachines" value={alloc.machine} onChange={e => { const newA = [...dryingAllocations]; newA[idx].machine = e.target.value; setDryingAllocations(newA); }} className="flex-1 p-2 border border-slate-300 rounded-lg text-sm" placeholder="စက်အမည်..." required/>
+                          <input type="text" list="dryingMachines" value={alloc.machine} onChange={e => { const newA = [...dryingAllocations]; newA[idx].machine = e.target.value; setDryingAllocations(newA); }} className="flex-1 p-2 border border-slate-300 rounded-lg text-sm bg-white text-slate-900" placeholder="စက်အမည်..." required/>
                           <datalist id="dryingMachines">{DRYING_MACHINES.map(m => <option key={m} value={m}/>)}</datalist>
-                          <input type="number" value={alloc.qty} onChange={e => { const newA = [...dryingAllocations]; newA[idx].qty = e.target.value; setDryingAllocations(newA); }} className="w-24 p-2 border border-slate-300 rounded-lg text-sm" placeholder="တင်း" required min="1"/>
+                          <input type="number" value={alloc.qty} onChange={e => { const newA = [...dryingAllocations]; newA[idx].qty = e.target.value; setDryingAllocations(newA); }} className="w-24 p-2 border border-slate-300 rounded-lg text-sm bg-white text-slate-900" placeholder="တင်း" required min="1"/>
                         </div>
                       ))}
                       <div className="flex justify-between items-center mt-2">
@@ -292,6 +336,7 @@ export default function MillERP() {
                   ) : <button onClick={() => { setActiveJobId(job.id + '-todry'); setDryingAllocations([{machine: '', qty: job.currentQty}]); }} className="w-full mt-2 bg-amber-50 text-amber-700 py-2.5 rounded-lg text-sm font-bold hover:bg-amber-100">စက်ထဲ ခွဲထည့်မည်</button>}
                 </div>
               ))}
+              {jobs.filter(j => j.status === 'waiting_dry').length === 0 && <p className="text-slate-400 text-sm font-bold text-center py-6">စောင့်ဆိုင်းစာရင်း မရှိပါ။</p>}
             </div>
           </div>
 
@@ -303,13 +348,19 @@ export default function MillERP() {
                 <div key={job.id} className="bg-white p-5 rounded-xl border border-orange-200 shadow-sm relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-orange-500"></div>
                   <div className="flex justify-between items-start mb-4 pl-3">
-                    <div><span className="font-black text-slate-800 block text-lg">{job.customer}</span><span className="text-sm font-bold text-slate-500 mt-1 block">{job.id} • {job.paddyType}</span></div>
-                    <div className="text-right"><span className="text-sm font-black text-orange-600 block mb-1">{job.originalQty} တင်း ဝင်ထား</span></div>
+                    <div>
+                       <span className="font-black text-slate-800 block text-lg">{job.customer}</span>
+                       <span className="text-sm font-bold text-slate-500 mt-1 block">{job.id} • {job.paddyType}</span>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                       <span className="text-sm font-black text-orange-600 block mb-1">{job.originalQty} တင်း ဝင်ထား</span>
+                       <button onClick={() => handleDeleteJob(job.id)} className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-200" title="ပယ်ဖျက်မည်"><Trash2 size={16} /></button>
+                    </div>
                   </div>
                   
                   {activeJobId === job.id + '-finish' ? (
                     <div className="mt-4 pt-4 border-t border-orange-100 space-y-4 pl-3">
-                      <div><label className="text-xs font-bold text-orange-800 block mb-1.5">ကျန်ရှိမည့် တင်း</label><input type="number" value={dryQtyInput} onChange={e=>setDryQtyInput(e.target.value)} className="w-full p-3 border-2 border-orange-300 rounded-xl outline-none bg-orange-50 text-slate-900 font-black" required/></div>
+                      <div><label className="text-xs font-bold text-orange-800 block mb-1.5">ကျန်ရှိမည့် တင်း</label><input type="number" value={dryQtyInput} onChange={e=>setDryQtyInput(e.target.value)} className="w-full p-3 border-2 border-orange-300 rounded-xl outline-none bg-white text-slate-900 font-black" required/></div>
                       <div><label className="text-xs font-bold text-slate-600 block mb-1.5">သိုလှောင်ရုံ/နေရာ အသစ်</label><input type="text" list="paddyStorage" value={dryStorageInput} onChange={e=>setDryStorageInput(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm bg-white text-slate-900" required/></div>
                       
                       <div className="flex gap-2 pt-2">
@@ -320,7 +371,7 @@ export default function MillERP() {
                       {job.purpose === 'mill' ? (
                          <div className="flex gap-2 pt-1 border-t border-slate-100 mt-2">
                             <button disabled={isLoading} onClick={() => handleDryingDone(job, 'waiting_mill')} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-xl text-xs font-bold shadow-md">စက်ကြိတ်ရန် ပို့မည်</button>
-                            <button disabled={isLoading} onClick={() => handleDryingDone(job, 'ready_to_bill_advance')} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-xs font-bold shadow-md flex items-center justify-center whitespace-nowrap"><Receipt size={14} className="mr-1"/> အခြောက်ခံခ ဘေလ်ကြိုဖွင့်မည်</button>
+                            <button disabled={isLoading} onClick={() => handleDryingDone(job, 'ready_to_bill_advance')} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-xs font-bold shadow-md flex items-center justify-center whitespace-nowrap"><Receipt size={14} className="mr-1"/> ဘေလ်ကြိုဖွင့်မည်</button>
                          </div>
                       ) : (
                          <button disabled={isLoading} onClick={() => handleDryingDone(job, 'ready_to_bill')} className="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-xl text-sm font-bold shadow-md mt-2">အခြောက်ခံပြီး (ဘေလ်ရှင်းရန်ပို့မည်)</button>
@@ -329,6 +380,7 @@ export default function MillERP() {
                   ) : <div className="pl-3 mt-4 border-t border-slate-100 pt-4"><button onClick={() => setActiveJobId(job.id + '-finish')} className="w-full bg-orange-50 text-orange-700 py-3 rounded-xl text-sm font-bold hover:bg-orange-100 shadow-sm">အခြောက်ခံပြီးစီး</button></div>}
                 </div>
               ))}
+              {jobs.filter(j => j.status === 'drying').length === 0 && <p className="text-slate-400 text-sm font-bold text-center py-6">အခြောက်ခံနေဆဲ မရှိပါ။</p>}
             </div>
           </div>
         </div>
@@ -356,8 +408,11 @@ export default function MillERP() {
                   <h3 className="font-black text-2xl text-slate-800">{job.customer}</h3>
                   <div className="text-sm font-bold text-slate-500 mt-2">{job.id} • {job.paddyType} <span className="text-purple-600 ml-2 bg-purple-50 px-2 py-0.5 rounded">စပါး ({job.currentQty || 0} တင်း)</span></div>
                 </div>
-                <div className="text-right">
-                   <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-black uppercase mb-2 block">ကြိတ်ရန်အသင့်</span>
+                <div className="text-right flex flex-col items-end">
+                   <div className="flex items-center gap-2 mb-2">
+                     <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-black uppercase block">ကြိတ်ရန်အသင့်</span>
+                     <button onClick={() => handleDeleteJob(job.id)} className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-200" title="ပယ်ဖျက်မည်"><Trash2 size={16} /></button>
+                   </div>
                    {job.advanceBillData && <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-[10px] font-bold block mb-2">အခြောက်ခံခ ရှင်းပြီး</span>}
                    <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md border border-slate-200"><MapPin size={12} className="inline mr-1"/>{job.storage}</span>
                 </div>
@@ -372,7 +427,7 @@ export default function MillERP() {
                     <div><label className="text-xs font-bold text-amber-700 block mb-2">ဖွဲနု (အိတ်)</label><input type="number" value={millInput.bran} onChange={e=>setMillInput({...millInput, bran: e.target.value})} className="w-full p-3 border border-amber-200 rounded-xl bg-white text-slate-900"/></div>
                   </div>
                   <div className="flex justify-end gap-3 pt-2">
-                    <button disabled={isLoading} onClick={() => setActiveJobId(null)} className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-sm">ပယ်ဖျက်</button>
+                    <button disabled={isLoading} onClick={() => setActiveJobId(null)} className="px-6 py-3 bg-white hover:bg-slate-100 text-slate-800 font-bold rounded-xl text-sm border border-slate-200">ပယ်ဖျက်</button>
                     <button disabled={isLoading} onClick={() => handleMillDone(job.id)} className="px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-sm shadow-lg flex items-center">
                       ကြိတ်ခွဲမှု စာရင်းသွင်းမည် <ArrowRight size={18} className="ml-2"/>
                     </button>
@@ -381,6 +436,7 @@ export default function MillERP() {
               ) : <div className="border-t border-slate-100 pt-5 mt-2"><button onClick={() => setActiveJobId(job.id)} className="w-full bg-slate-50 hover:bg-purple-50 text-purple-700 border border-purple-200 py-3.5 rounded-xl font-bold text-sm">ကြိတ်ခွဲမှု ရလဒ်များ စာရင်းသွင်းမည်</button></div>}
             </div>
           ))}
+          {jobs.filter(j => j.status === 'waiting_mill' && j.purpose === 'mill').length === 0 && <p className="text-slate-400 text-sm font-bold text-center py-6 bg-white rounded-2xl border border-slate-200 border-dashed">ကြိတ်ခွဲရန် စာရင်း မရှိပါ။</p>}
         </div>
       </div>
     );
@@ -408,8 +464,11 @@ export default function MillERP() {
                     <h3 className="font-black text-2xl text-slate-800">{job.customer}</h3>
                     <div className="text-sm font-bold text-slate-500 mt-2">{job.id} • {job.paddyType}</div>
                   </div>
-                  <div className="text-right">
-                     <span className="bg-indigo-100 text-indigo-800 px-4 py-1.5 rounded-full text-xs font-black uppercase mb-2 block">Sort ရန်အသင့်</span>
+                  <div className="text-right flex flex-col items-end">
+                     <div className="flex items-center gap-2 mb-2">
+                       <span className="bg-indigo-100 text-indigo-800 px-4 py-1.5 rounded-full text-xs font-black uppercase block">Sort ရန်အသင့်</span>
+                       <button onClick={() => handleDeleteJob(job.id)} className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-200" title="ပယ်ဖျက်မည်"><Trash2 size={16} /></button>
+                     </div>
                      {job.advanceBillData && <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-[10px] font-bold block mb-2">အခြောက်ခံခ ရှင်းပြီး</span>}
                   </div>
                 </div>
@@ -417,13 +476,13 @@ export default function MillERP() {
                 {activeJobId === job.id ? (
                   <div className="bg-indigo-50/40 p-6 rounded-2xl border border-indigo-100 mt-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                      <div className="bg-white p-4 rounded-xl border border-indigo-100"><label className="text-sm font-bold text-indigo-900 block mb-3">{labels[0]}</label><input type="number" value={sortInput.out1} onChange={e=>setSortInput({...sortInput, out1: e.target.value})} className="w-full p-3 border-2 border-indigo-200 rounded-lg outline-none font-black text-slate-900 text-lg mb-2"/><input type="text" list="riceStorage" value={sortInput.storage1} onChange={e=>setSortInput({...sortInput, storage1: e.target.value})} className="w-full p-2.5 border border-slate-200 text-slate-900 rounded-lg text-xs" placeholder="နေရာ..."/></div>
-                      <div className="bg-white p-4 rounded-xl border border-slate-200"><label className="text-sm font-bold text-slate-700 block mb-3">{labels[1]}</label><input type="number" value={sortInput.out2} onChange={e=>setSortInput({...sortInput, out2: e.target.value})} className="w-full p-3 border border-slate-300 rounded-lg outline-none font-bold text-slate-900 mb-2"/><input type="text" list="riceStorage" value={sortInput.storage2} onChange={e=>setSortInput({...sortInput, storage2: e.target.value})} className="w-full p-2.5 border border-slate-200 text-slate-900 rounded-lg text-xs" placeholder="နေရာ..."/></div>
-                      <div className="bg-white p-4 rounded-xl border border-red-100"><label className="text-sm font-bold text-red-700 block mb-3">{labels[2]}</label><input type="number" value={sortInput.out3} onChange={e=>setSortInput({...sortInput, out3: e.target.value})} className="w-full p-3 border border-red-200 rounded-lg outline-none font-bold text-slate-900 mb-2"/><input type="text" list="riceStorage" value={sortInput.storage3} onChange={e=>setSortInput({...sortInput, storage3: e.target.value})} className="w-full p-2.5 border border-red-200 text-slate-900 rounded-lg text-xs" placeholder="နေရာ..."/></div>
+                      <div className="bg-white p-4 rounded-xl border border-indigo-100"><label className="text-sm font-bold text-indigo-900 block mb-3">{labels[0]}</label><input type="number" value={sortInput.out1} onChange={e=>setSortInput({...sortInput, out1: e.target.value})} className="w-full p-3 border-2 border-indigo-200 rounded-lg outline-none font-black text-slate-900 text-lg mb-2 bg-white"/><input type="text" list="riceStorage" value={sortInput.storage1} onChange={e=>setSortInput({...sortInput, storage1: e.target.value})} className="w-full p-2.5 border border-slate-200 bg-white text-slate-900 rounded-lg text-xs" placeholder="နေရာ..."/></div>
+                      <div className="bg-white p-4 rounded-xl border border-slate-200"><label className="text-sm font-bold text-slate-700 block mb-3">{labels[1]}</label><input type="number" value={sortInput.out2} onChange={e=>setSortInput({...sortInput, out2: e.target.value})} className="w-full p-3 border border-slate-300 rounded-lg outline-none font-bold text-slate-900 mb-2 bg-white"/><input type="text" list="riceStorage" value={sortInput.storage2} onChange={e=>setSortInput({...sortInput, storage2: e.target.value})} className="w-full p-2.5 border border-slate-200 bg-white text-slate-900 rounded-lg text-xs" placeholder="နေရာ..."/></div>
+                      <div className="bg-white p-4 rounded-xl border border-red-100"><label className="text-sm font-bold text-red-700 block mb-3">{labels[2]}</label><input type="number" value={sortInput.out3} onChange={e=>setSortInput({...sortInput, out3: e.target.value})} className="w-full p-3 border border-red-200 rounded-lg outline-none font-bold text-slate-900 mb-2 bg-white"/><input type="text" list="riceStorage" value={sortInput.storage3} onChange={e=>setSortInput({...sortInput, storage3: e.target.value})} className="w-full p-2.5 border border-red-200 bg-white text-slate-900 rounded-lg text-xs" placeholder="နေရာ..."/></div>
                     </div>
                     <datalist id="riceStorage">{RICE_STORAGE.map(s => <option key={s} value={s}/>)}</datalist>
                     <div className="flex justify-end gap-3 pt-2 border-t border-indigo-100">
-                      <button disabled={isLoading} onClick={() => setActiveJobId(null)} className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-sm">ပယ်ဖျက်</button>
+                      <button disabled={isLoading} onClick={() => setActiveJobId(null)} className="px-6 py-3 bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 font-bold rounded-xl text-sm">ပယ်ဖျက်</button>
                       <button disabled={isLoading} onClick={() => handleSortDone(job.id)} className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm shadow-lg">ဂိုဒေါင် / ငွေစာရင်းသို့ ပို့မည်</button>
                     </div>
                   </div>
@@ -431,6 +490,7 @@ export default function MillERP() {
               </div>
             );
           })}
+          {jobs.filter(j => j.status === 'waiting_sort').length === 0 && <p className="text-slate-400 text-sm font-bold text-center py-6 bg-white rounded-2xl border border-slate-200 border-dashed">Sorting လုပ်ရန် စာရင်း မရှိပါ။</p>}
         </div>
       </div>
     );
@@ -568,7 +628,7 @@ export default function MillERP() {
       await supabase.from('jobs').update({ status: 'waiting_mill', advanceBillData: advanceData }).eq('id', job.id);
       setActiveJobId(null); setBillInput({ dryingRate: '', sortingRate: '', millingRate: '', branOption: 'take', branRate: '', byproductOption: 'take', byproductRate: '', rejectOption: 'take', rejectRate: '', otherExp: '', paidAmount: '' });
       setIsLoading(false);
-      alert("အခြောက်ခံခ ဘေလ်သိမ်းပြီးပါပြီ။ ဤစာရင်းသည် စက်ကြိတ်ဌာနသို့ ဆက်လက်ရောက်ရှိသွားပါမည်။");
+      showMessage("အခြောက်ခံခ ဘေလ်သိမ်းပြီးပါပြီ။ ဤစာရင်းသည် စက်ကြိတ်ဌာနသို့ ဆက်လက်ရောက်ရှိသွားပါမည်။");
     };
 
     const handleFinalBillSubmit = async (job, totalServiceFee, dryingFee, deduction, net, pd, bal) => {
@@ -581,7 +641,7 @@ export default function MillERP() {
       }).eq('id', job.id);
       setActiveJobId(null); setBillInput({ dryingRate: '', sortingRate: '', millingRate: '', branOption: 'take', branRate: '', byproductOption: 'take', byproductRate: '', rejectOption: 'take', rejectRate: '', otherExp: '', paidAmount: '' });
       setIsLoading(false);
-      alert("ငွေစာရင်း သိမ်းဆည်းပြီးပါပြီ။");
+      showMessage("ငွေစာရင်း သိမ်းဆည်းပြီးပါပြီ။");
     };
 
     return (
@@ -590,7 +650,7 @@ export default function MillERP() {
         <div className="bg-white p-6 rounded-2xl border border-slate-200 mb-8 shadow-sm">
           <label className="block text-sm font-bold text-slate-700 mb-3">ဘောက်ချာ ဖွင့်ရန် / ငွေရှင်းရန် ရှာဖွေပါ</label>
           <div className="relative max-w-xl">
-            <input type="text" placeholder="ဖောက်သည် အမည် (သို့) ဘောက်ချာ ID ရိုက်ထည့်ပါ..." value={adminSearchQuery} onChange={e => setAdminSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-3.5 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-500 font-bold bg-slate-50 text-slate-900"/>
+            <input type="text" placeholder="ဖောက်သည် အမည် (သို့) ဘောက်ချာ ID ရိုက်ထည့်ပါ..." value={adminSearchQuery} onChange={e => setAdminSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-3.5 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-500 font-bold bg-white text-slate-900"/>
             <Search className="absolute left-4 top-4 text-slate-400" size={20} />
           </div>
         </div>
@@ -627,7 +687,10 @@ export default function MillERP() {
               <div key={job.id} className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col">
                 <div className={`${isAdvance ? 'bg-emerald-700' : 'bg-slate-900'} p-6 text-white flex justify-between items-center relative`}>
                   <div className="relative z-10"><h3 className="text-2xl font-black mb-1">{job.customer}</h3><p className="text-white/70 text-sm font-bold">ID: {job.id} | {job.paddyType}</p></div>
-                  <span className={`${isAdvance ? 'bg-white text-emerald-800' : 'bg-blue-600 text-white'} px-4 py-1.5 rounded-full text-xs font-black uppercase shadow-md relative z-10`}>{isAdvance ? 'အခြောက်ခံခ ဘေလ်' : 'ငွေရှင်းရန် (Final)'}</span>
+                  <div className="relative z-10 flex items-center gap-3">
+                     <span className={`${isAdvance ? 'bg-white text-emerald-800' : 'bg-blue-600 text-white'} px-4 py-1.5 rounded-full text-xs font-black uppercase shadow-md`}>{isAdvance ? 'အခြောက်ခံခ ဘေလ်' : 'ငွေရှင်းရန် (Final)'}</span>
+                     <button onClick={() => handleDeleteJob(job.id)} className="p-1.5 text-white/50 hover:text-white hover:bg-white/20 rounded-lg transition-colors" title="ပယ်ဖျက်မည်"><Trash2 size={18} /></button>
+                  </div>
                 </div>
 
                 {activeJobId === job.id ? (
@@ -638,12 +701,12 @@ export default function MillERP() {
                         <>
                            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                              <label className="block text-sm font-bold text-slate-800 mb-3">အခြောက်ခံခ နှုန်းထား (၁ တင်းလျှင်)</label>
-                             <input type="number" value={billInput.dryingRate} onChange={e=>setBillInput({...billInput, dryingRate: e.target.value})} className="w-full p-3 border-2 border-slate-200 text-slate-900 rounded-xl outline-none focus:border-emerald-500 font-bold" placeholder="ကျပ်"/>
+                             <input type="number" value={billInput.dryingRate} onChange={e=>setBillInput({...billInput, dryingRate: e.target.value})} className="w-full p-3 border-2 border-slate-200 bg-white text-slate-900 rounded-xl outline-none focus:border-emerald-500 font-bold" placeholder="ကျပ်"/>
                              <p className="text-[11px] text-slate-500 mt-2 font-bold bg-slate-100 p-2 rounded-lg">မူလ စပါးအဝင် ({job.originalQty} တင်း) ဖြင့် မြှောက်ပါမည်။</p>
                            </div>
                            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                              <label className="block text-sm font-bold text-slate-800 mb-2">အခြား ကုန်ကျစရိတ်</label>
-                             <input type="number" value={billInput.otherExp} onChange={e=>setBillInput({...billInput, otherExp: e.target.value})} className="w-full p-3 border-2 border-slate-200 text-slate-900 rounded-xl outline-none focus:border-emerald-500 font-bold" placeholder="0"/>
+                             <input type="number" value={billInput.otherExp} onChange={e=>setBillInput({...billInput, otherExp: e.target.value})} className="w-full p-3 border-2 border-slate-200 bg-white text-slate-900 rounded-xl outline-none focus:border-emerald-500 font-bold" placeholder="0"/>
                            </div>
                         </>
                       )}
@@ -654,13 +717,13 @@ export default function MillERP() {
                             {job.wasWet && !hasPaidAdvance && (
                               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                                 <label className="block text-sm font-bold text-slate-800 mb-3">အခြောက်ခံခ နှုန်းထား (၁ တင်းလျှင်)</label>
-                                <input type="number" value={billInput.dryingRate} onChange={e=>setBillInput({...billInput, dryingRate: e.target.value})} className="w-full p-3 border-2 border-slate-200 text-slate-900 rounded-xl font-bold" placeholder="ကျပ်"/>
+                                <input type="number" value={billInput.dryingRate} onChange={e=>setBillInput({...billInput, dryingRate: e.target.value})} className="w-full p-3 border-2 border-slate-200 bg-white text-slate-900 rounded-xl font-bold" placeholder="ကျပ်"/>
                               </div>
                             )}
                             {!isDryOnly && (
                               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                                 <label className="block text-sm font-bold text-slate-800 mb-3">{isNawali ? 'နဝလီ Sorting နှုန်း (၁ အိတ်)' : 'စက်ကြိတ်ခ နှုန်း (၁ အိတ်)'}</label>
-                                <input type="number" value={isNawali ? billInput.sortingRate : billInput.millingRate} onChange={e=> isNawali ? setBillInput({...billInput, sortingRate: e.target.value}) : setBillInput({...billInput, millingRate: e.target.value})} className="w-full p-3 border-2 border-slate-200 text-slate-900 rounded-xl font-bold" placeholder="ကျပ်"/>
+                                <input type="number" value={isNawali ? billInput.sortingRate : billInput.millingRate} onChange={e=> isNawali ? setBillInput({...billInput, sortingRate: e.target.value}) : setBillInput({...billInput, millingRate: e.target.value})} className="w-full p-3 border-2 border-slate-200 bg-white text-slate-900 rounded-xl font-bold" placeholder="ကျပ်"/>
                               </div>
                             )}
                             {/* Shortened Deductions logic for Final Bill */}
@@ -674,7 +737,7 @@ export default function MillERP() {
                             )}
                             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                                <label className="block text-sm font-bold text-slate-800 mb-2">အခြား ကုန်ကျစရိတ်</label>
-                               <input type="number" value={billInput.otherExp} onChange={e=>setBillInput({...billInput, otherExp: e.target.value})} className="w-full p-3 border-2 border-slate-200 text-slate-900 rounded-xl font-bold" placeholder="0"/>
+                               <input type="number" value={billInput.otherExp} onChange={e=>setBillInput({...billInput, otherExp: e.target.value})} className="w-full p-3 border-2 border-slate-200 bg-white text-slate-900 rounded-xl font-bold" placeholder="0"/>
                             </div>
                          </>
                       )}
@@ -690,13 +753,13 @@ export default function MillERP() {
                       {Math.abs(netTotal) > 0 && (
                         <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                           <label className="block text-xs font-bold mb-2 uppercase text-slate-700">ပေးချေငွေ (Paid Amount)</label>
-                          <input type="number" value={billInput.paidAmount} onChange={e=>setBillInput({...billInput, paidAmount: e.target.value})} className="w-full p-3 border-2 border-slate-300 text-slate-900 rounded-lg font-bold text-xl" placeholder="0" min="0"/>
+                          <input type="number" value={billInput.paidAmount} onChange={e=>setBillInput({...billInput, paidAmount: e.target.value})} className="w-full p-3 border-2 border-slate-300 bg-white text-slate-900 rounded-lg font-bold text-xl" placeholder="0" min="0"/>
                         </div>
                       )}
                     </div>
 
                     <div className="flex gap-4 mt-6">
-                      <button disabled={isLoading} onClick={() => setActiveJobId(null)} className="px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl transition-colors">ပယ်ဖျက်</button>
+                      <button disabled={isLoading} onClick={() => setActiveJobId(null)} className="px-6 py-4 bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 font-bold rounded-xl transition-colors">ပယ်ဖျက်</button>
                       {isAdvance ? (
                         <button disabled={isLoading} onClick={() => handleAdvanceBillSubmit(job, netTotal, paid, balance)} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg flex items-center justify-center text-lg"><CheckCircle size={22} className="mr-2"/> ကြိုတင်ဘေလ် သိမ်းမည်</button>
                       ) : (
@@ -749,7 +812,7 @@ export default function MillERP() {
       setPaymentModal(null);
       setPaymentAmount('');
       setIsLoading(false);
-      alert("ငွေစာရင်း မှတ်တမ်းတင်ပြီးပါပြီ။");
+      showMessage("ငွေစာရင်း မှတ်တမ်းတင်ပြီးပါပြီ။");
     }
 
     const filteredCustomers = Object.values(customerStats).filter(c => c.name.toLowerCase().includes(ledgerSearchQuery.toLowerCase()));
@@ -759,7 +822,7 @@ export default function MillERP() {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-slate-800 flex items-center"><Users className="mr-3 text-indigo-600"/> ဖောက်သည် မှတ်တမ်း / အကြွေးစာရင်း</h2>
           <div className="relative w-72">
-            <input type="text" placeholder="အမည်ဖြင့် ရှာရန်..." value={ledgerSearchQuery} onChange={e=>setLedgerSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border-2 border-slate-200 text-slate-900 rounded-xl outline-none focus:border-indigo-500 bg-white font-bold"/>
+            <input type="text" placeholder="အမည်ဖြင့် ရှာရန်..." value={ledgerSearchQuery} onChange={e=>setLedgerSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border-2 border-slate-200 bg-white text-slate-900 rounded-xl outline-none focus:border-indigo-500 font-bold"/>
             <Search className="absolute left-3.5 top-3 text-slate-400" size={18} />
           </div>
         </div>
@@ -817,7 +880,7 @@ export default function MillERP() {
                   <div className="p-4 bg-white border-b border-slate-200">
                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center"><Edit3 size={14} className="mr-1"/> မှတ်ချက် (မှတ်တမ်းထားရန်)</label>
                      <textarea
-                       className="w-full p-3 text-sm border border-slate-300 text-slate-900 rounded-lg outline-none focus:border-indigo-500 resize-none h-20 bg-amber-50/50"
+                       className="w-full p-3 text-sm border border-slate-300 bg-amber-50/50 text-slate-900 rounded-lg outline-none focus:border-indigo-500 resize-none h-20"
                        placeholder="ဖောက်သည်အကြောင်း မှတ်သားရန် (ဥပမာ- ဘယ်နေ့ အကြွေးလာဆပ်မည် စသည်)..."
                        value={customerRemarks[cust.name] || ''}
                        onChange={e => updateRemark(cust.name, e.target.value)}
@@ -832,6 +895,7 @@ export default function MillERP() {
                           <th className="pb-3 px-4 font-bold">အမျိုးအစား/အခြေအနေ</th>
                           <th className="pb-3 px-4 font-bold text-right">ကျသင့်ငွေ/ပေးချေငွေ</th>
                           <th className="pb-3 px-4 font-bold text-right">အကြွေး / ပေးရန်ကျန်</th>
+                          <th className="pb-3 px-2 font-bold text-center">လုပ်ဆောင်ချက်</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-slate-800">
@@ -866,6 +930,9 @@ export default function MillERP() {
                                 h.billData.balance < 0 ? <span className="text-green-600">-{Math.abs(h.billData.balance).toLocaleString()}</span> : <span className="text-slate-400">-</span>
                               ) : '-'}
                             </td>
+                            <td className="py-4 px-2 text-center">
+                              <button onClick={() => handleDeleteJob(h.id)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors" title="ဤမှတ်တမ်းအား ဖျက်မည်"><Trash2 size={16}/></button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -895,7 +962,7 @@ export default function MillERP() {
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">ပေးချေမည့် ငွေပမာဏ (ကျပ်)</label>
-                  <input type="number" required autoFocus value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)} className="w-full p-4 border-2 border-slate-300 text-slate-900 rounded-xl outline-none focus:border-indigo-500 text-xl font-bold text-center" placeholder="0" min="1"/>
+                  <input type="number" required autoFocus value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)} className="w-full p-4 border-2 border-slate-300 bg-white text-slate-900 rounded-xl outline-none focus:border-indigo-500 text-xl font-bold text-center" placeholder="0" min="1"/>
                 </div>
                 <button disabled={isLoading} type="submit" className={`w-full mt-6 py-4 rounded-xl text-white font-bold text-lg shadow-lg ${paymentModal.type === 'receive' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-green-600 hover:bg-green-700'}`}>
                   {isLoading ? 'Processing...' : 'အတည်ပြု မှတ်တမ်းတင်မည်'}
@@ -954,7 +1021,30 @@ export default function MillERP() {
   };
 
   return (
-    <div className="flex h-screen bg-[#f1f5f9] font-sans">
+    <div className="flex h-screen bg-[#f1f5f9] font-sans relative">
+      {/* Global Dialog Component */}
+      {dialogConfig && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="p-8 text-center">
+                 <AlertCircle size={48} className={`mx-auto mb-4 ${dialogConfig.type === 'confirm' ? 'text-rose-500' : 'text-blue-500'}`} />
+                 <p className="text-lg font-bold text-slate-800 mb-8 leading-snug">{dialogConfig.message}</p>
+                 <div className="flex gap-3 justify-center">
+                    {dialogConfig.type === 'confirm' && (
+                       <button onClick={() => setDialogConfig(null)} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors">မလုပ်တော့ပါ</button>
+                    )}
+                    <button onClick={() => {
+                        if (dialogConfig.onConfirm) dialogConfig.onConfirm();
+                        if (dialogConfig.type === 'alert') setDialogConfig(null);
+                    }} className={`flex-1 py-3 font-bold rounded-xl text-white shadow-md transition-colors ${dialogConfig.type === 'confirm' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                       {dialogConfig.type === 'confirm' ? 'ဖျက်မည်' : 'အိုကေ'}
+                    </button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
       <div className="w-[280px] bg-white border-r border-slate-200 flex flex-col shadow-sm z-20">
         <div className="p-6 border-b border-slate-100 flex items-center space-x-3 bg-blue-700">
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-blue-700 font-black text-xl shadow-inner">စက်</div>
