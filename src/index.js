@@ -44,6 +44,18 @@ export default function MillERP() {
   const [paymentModal, setPaymentModal] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
 
+  // --- AdminView & CustomerLedgerView State (Hoisted to prevent Keyboard close issue) ---
+  const [adminSearchQuery, setAdminSearchQuery] = useState('');
+  const [billInput, setBillInput] = useState({ 
+    dryingRate: '', sortingRate: '', millingRate: '', 
+    branOption: 'take', branRate: '', 
+    byproductOption: 'take', byproductRate: '',
+    rejectOption: 'take', rejectRate: '', 
+    otherExp: '', paidAmount: '' 
+  });
+  const [ledgerSearchQuery, setLedgerSearchQuery] = useState('');
+  const [expandedCustomer, setExpandedCustomer] = useState(null);
+
   // --- Supabase Data Fetching & Realtime Subscription ---
   useEffect(() => {
     if (!isConfigured) return;
@@ -105,7 +117,7 @@ export default function MillERP() {
     );
   }
 
-  const GateView = () => {
+  const renderGateView = () => {
     const handleAddJob = async (e) => {
       e.preventDefault();
       if(!newJob.customer || !newJob.qty || !newJob.paddyType) return alert("အချက်အလက်များ ပြည့်စုံစွာ ထည့်ပါ။");
@@ -236,6 +248,7 @@ export default function MillERP() {
           </form>
         </div>
 
+        {}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Waiting to Dry */}
           <div className="bg-white rounded-2xl border border-amber-200 overflow-hidden shadow-sm flex flex-col">
@@ -349,7 +362,7 @@ export default function MillERP() {
     );
   };
 
-  const MillingView = () => {
+  const renderMillingView = () => {
     const handleMillDone = async (jobId) => {
       setIsLoading(true);
       await supabase.from('jobs').update({ status: 'waiting_sort', millingData: millInput }).eq('id', jobId);
@@ -403,7 +416,7 @@ export default function MillERP() {
     );
   };
 
-  const SortingView = () => {
+  const renderSortingView = () => {
     const handleSortDone = async (jobId) => {
       const labels = getSortingLabels(jobs.find(j=>j.id===jobId).paddyType);
       if (sortInput.out1 > 0 && !sortInput.storage1) return alert(`${labels[0]} အတွက် သိုလှောင်ရုံ/နေရာ ရွေးပါ။`);
@@ -443,7 +456,7 @@ export default function MillERP() {
                 
                 {activeJobId === job.id ? (
                   <div className="bg-indigo-50/40 p-6 rounded-2xl border border-indigo-100 mt-6 animate-in fade-in slide-in-from-top-2">
-                    <h4 className="text-xs font-black text-indigo-800 uppercase tracking-wider mb-5 border-b border-indigo-100 pb-3 flex items-center"><Package size={16} className="mr-2"/> Sorting ထွက်ကုန်များ</h4>
+                    <h4 className="text-xs font-black text-indigo-800 uppercase tracking-wider mb-5 border-b border-indigo-100 pb-3 flex items-center"><Package className="mr-2"/> Sorting ထွက်ကုန်များ</h4>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                       <div className="bg-white p-4 rounded-xl border border-indigo-100 shadow-sm">
@@ -496,7 +509,7 @@ export default function MillERP() {
     );
   };
 
-  const WarehouseView = () => {
+  const renderWarehouseView = () => {
     return (
       <div className="animate-in fade-in duration-300">
         <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><Factory className="mr-3 text-emerald-600"/> သိုလှောင်ရုံ (ဂိုဒေါင်)</h2>
@@ -576,7 +589,7 @@ export default function MillERP() {
     );
   };
 
-  const InventoryView = () => {
+  const renderInventoryView = () => {
     let totalPurchasedBran = 0;
     let totalPurchasedByproduct = 0;
     let totalPurchasedReject = 0;
@@ -614,16 +627,7 @@ export default function MillERP() {
     );
   };
 
-  const AdminView = () => {
-    const [adminSearchQuery, setAdminSearchQuery] = useState('');
-    const [billInput, setBillInput] = useState({ 
-      dryingRate: '', sortingRate: '', millingRate: '', 
-      branOption: 'take', branRate: '', 
-      byproductOption: 'take', byproductRate: '',
-      rejectOption: 'take', rejectRate: '', 
-      otherExp: '', paidAmount: '' 
-    });
-
+  const renderAdminView = () => {
     const handleBillSubmit = async (job, totalServiceFee, dryingFee, deduction, net, pd, bal) => {
       setIsLoading(true);
       await supabase.from('jobs').update({ 
@@ -634,7 +638,7 @@ export default function MillERP() {
       setActiveJobId(null);
       setBillInput({ dryingRate: '', sortingRate: '', millingRate: '', branOption: 'take', branRate: '', byproductOption: 'take', byproductRate: '', rejectOption: 'take', rejectRate: '', otherExp: '', paidAmount: '' });
       setIsLoading(false);
-      alert("ငွေစာရင်းသိမ်းဆည်းပြီးပါပြီ။");
+      alert("ငွေစာရင်းသိမ်းဆည်းပြီးပါပြီ။ ဘောက်ချာထုတ်နိုင်ပါသည်။");
     };
 
     const pendingJobs = jobs.filter(j => j.status === 'ready_to_bill');
@@ -650,7 +654,7 @@ export default function MillERP() {
         <div className="bg-white p-6 rounded-2xl border border-slate-200 mb-8 shadow-sm">
           <label className="block text-sm font-bold text-slate-700 mb-3">ဘောက်ချာ ဖွင့်ရန် / ငွေရှင်းရန် ရှာဖွေပါ</label>
           <div className="relative max-w-xl">
-            <input type="text" placeholder="ဖောက်သည် အမည် (သို့) ဘောက်ချာ ID ရိုက်ထည့်ပါ..." value={adminSearchQuery} onChange={e => setAdminSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-3.5 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-900 bg-slate-50"/>
+            <input type="text" placeholder="ဖောက်သည် အမည် (သို့) ဘောက်ချာ ID ရိုက်ထည့်ပါ..." value={adminSearchQuery} onChange={e => setAdminSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-3.5 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-900 bg-slate-50 transition-colors"/>
             <Search className="absolute left-4 top-4 text-slate-400" size={20} />
           </div>
           {adminSearchQuery.trim() === '' && !activeJobId && <p className="text-sm font-medium text-slate-400 mt-4 flex items-center"><ArrowUpRight size={16} className="mr-2 text-blue-400"/> ရှာဖွေမှု အကွက်တွင် ရိုက်ထည့်မှသာ ဘေလ်များ ပေါ်လာပါမည်။</p>}
@@ -658,7 +662,9 @@ export default function MillERP() {
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {adminSearchQuery.trim() !== '' && searchedJobs.length === 0 && !activeJobId && (
-             <div className="col-span-2 text-center py-10 bg-white rounded-xl border border-slate-200"><p className="text-slate-500">ရှာဖွေမှုနှင့် ကိုက်ညီသော စာရင်း မရှိပါ။</p></div>
+             <div className="col-span-2 text-center py-12 bg-white rounded-2xl border border-slate-200 border-dashed">
+                <p className="text-slate-500 font-bold text-lg">ရှာဖွေမှုနှင့် ကိုက်ညီသော ရှင်းရန်ကျန်စာရင်း မရှိပါ။</p>
+             </div>
           )}
 
           {searchedJobs.map(job => {
@@ -672,8 +678,11 @@ export default function MillERP() {
 
             if (!isDryOnly) {
               totalMilledBags = isNawali ? 0 : (Number(job.millingData?.rice || 0) + Number(job.millingData?.broken12 || 0) + Number(job.millingData?.broken234 || 0));
-              if (isNawali) totalServiceFee = Number(job.originalQty) * (Number(billInput.sortingRate) || 0);
-              else totalServiceFee = totalMilledBags * (Number(billInput.millingRate) || 0);
+              if (isNawali) {
+                 totalServiceFee = Number(job.originalQty) * (Number(billInput.sortingRate) || 0);
+              } else {
+                 totalServiceFee = totalMilledBags * (Number(billInput.millingRate) || 0);
+              }
             }
 
             const branQty = isNawali || isDryOnly ? 0 : Number(job.millingData?.bran || 0);
@@ -695,11 +704,12 @@ export default function MillERP() {
 
             return (
               <div key={job.id} className="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col transition-all">
-                <div className="bg-slate-900 p-6 text-white flex justify-between items-center relative overflow-hidden">
+                
+                <div className="bg-slate-900 p-6 text-white flex justify-between items-center relative overflow-hidden shrink-0">
                   <div className="absolute right-0 top-0 opacity-10 transform translate-x-1/4 -translate-y-1/4"><Receipt size={140}/></div>
                   <div className="relative z-10">
                     <h3 className="text-2xl font-black text-white mb-1">{job.customer}</h3>
-                    <p className="text-slate-400 text-sm font-bold">ID: {job.id} | {job.paddyType}</p>
+                    <p className="text-slate-400 text-sm font-bold">ID: {job.id} | {job.paddyType} | {job.date}</p>
                   </div>
                   <span className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md relative z-10">ငွေရှင်းရန်</span>
                 </div>
@@ -756,7 +766,7 @@ export default function MillERP() {
                                 <label className="flex items-center text-sm font-bold text-cyan-700 cursor-pointer"><input type="radio" value="sell" checked={billInput.branOption === 'sell'} onChange={e=>setBillInput({...billInput, branOption: e.target.value})} className="mr-2 w-4 h-4 text-cyan-600 focus:ring-cyan-500"/> စက်သို့ ရောင်းမည်</label>
                               </div>
                               {billInput.branOption === 'sell' && (
-                                <div className="relative max-w-xs mt-2">
+                                <div className="relative max-w-xs mt-2 animate-in fade-in zoom-in-95 duration-200">
                                   <input type="number" value={billInput.branRate} onChange={e=>setBillInput({...billInput, branRate: e.target.value})} className="w-full p-2.5 pl-4 pr-12 border-2 border-cyan-300 bg-cyan-50 text-cyan-900 rounded-lg outline-none focus:border-cyan-500 font-bold" placeholder="ဝယ်ယူမည့် နှုန်း (၁ အိတ်)"/>
                                   <span className="absolute right-3 top-3 text-cyan-600 font-bold text-sm">Ks</span>
                                 </div>
@@ -773,7 +783,7 @@ export default function MillERP() {
                                 <label className="flex items-center text-sm font-bold text-cyan-700 cursor-pointer"><input type="radio" value="sell" checked={billInput.byproductOption === 'sell'} onChange={e=>setBillInput({...billInput, byproductOption: e.target.value})} className="mr-2 w-4 h-4 text-cyan-600 focus:ring-cyan-500"/> စက်သို့ ရောင်းမည်</label>
                               </div>
                               {billInput.byproductOption === 'sell' && (
-                                <div className="relative max-w-xs mt-2">
+                                <div className="relative max-w-xs mt-2 animate-in fade-in zoom-in-95 duration-200">
                                   <input type="number" value={billInput.byproductRate} onChange={e=>setBillInput({...billInput, byproductRate: e.target.value})} className="w-full p-2.5 pl-4 pr-12 border-2 border-cyan-300 bg-cyan-50 text-cyan-900 rounded-lg outline-none focus:border-cyan-500 font-bold" placeholder="ဝယ်ယူမည့် နှုန်း (၁ အိတ်)"/>
                                   <span className="absolute right-3 top-3 text-cyan-600 font-bold text-sm">Ks</span>
                                 </div>
@@ -790,7 +800,7 @@ export default function MillERP() {
                                 <label className="flex items-center text-sm font-bold text-cyan-700 cursor-pointer"><input type="radio" value="sell" checked={billInput.rejectOption === 'sell'} onChange={e=>setBillInput({...billInput, rejectOption: e.target.value})} className="mr-2 w-4 h-4 text-cyan-600 focus:ring-cyan-500"/> စက်သို့ ရောင်းမည်</label>
                               </div>
                               {billInput.rejectOption === 'sell' && (
-                                <div className="relative max-w-xs mt-2">
+                                <div className="relative max-w-xs mt-2 animate-in fade-in zoom-in-95 duration-200">
                                   <input type="number" value={billInput.rejectRate} onChange={e=>setBillInput({...billInput, rejectRate: e.target.value})} className="w-full p-2.5 pl-4 pr-12 border-2 border-cyan-300 bg-cyan-50 text-cyan-900 rounded-lg outline-none focus:border-cyan-500 font-bold" placeholder="ဝယ်ယူမည့် နှုန်း (၁ အိတ်)"/>
                                   <span className="absolute right-3 top-3 text-cyan-600 font-bold text-sm">Ks</span>
                                 </div>
@@ -809,67 +819,67 @@ export default function MillERP() {
                       </div>
                     </div>
 
-                    <div className="mt-auto bg-slate-900 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
-                      <div className="space-y-3 text-sm mb-6 relative z-10">
+                    <div className="mt-auto bg-white border border-slate-200 rounded-xl p-6 shadow-sm relative overflow-hidden">
+                      <div className="space-y-3 text-sm mb-6">
                         {dryingFee > 0 && (
-                          <div className="flex justify-between text-slate-300">
+                          <div className="flex justify-between text-slate-600">
                             <span>အခြောက်ခံခ:</span>
-                            <span className="font-bold text-white">{dryingFee.toLocaleString()} Ks</span>
+                            <span className="font-bold text-slate-800">{dryingFee.toLocaleString()} Ks</span>
                           </div>
                         )}
                         {!isDryOnly && (
-                           <div className="flex justify-between text-slate-300">
+                           <div className="flex justify-between text-slate-600">
                              <span>{isNawali ? 'နဝလီ Sorting ခ:' : 'ကြိတ်ခွဲခ:'}</span>
-                             <span className="font-bold text-white">{totalServiceFee.toLocaleString()} Ks</span>
+                             <span className="font-bold text-slate-800">{totalServiceFee > 0 ? `${totalServiceFee.toLocaleString()} Ks` : '0 Ks'}</span>
                            </div>
                         )}
                         {branDeduction > 0 && (
-                          <div className="flex justify-between text-cyan-400 font-bold">
+                          <div className="flex justify-between text-cyan-600 font-bold">
                             <span>ဖွဲနုဖိုး နှိမ်ငွေ:</span>
                             <span>- {branDeduction.toLocaleString()} Ks</span>
                           </div>
                         )}
                         {byproductDeduction > 0 && (
-                          <div className="flex justify-between text-cyan-400 font-bold">
+                          <div className="flex justify-between text-cyan-600 font-bold">
                             <span>{labels[1]} နှိမ်ငွေ:</span>
                             <span>- {byproductDeduction.toLocaleString()} Ks</span>
                           </div>
                         )}
                         {rejectDeduction > 0 && (
-                          <div className="flex justify-between text-cyan-400 font-bold">
+                          <div className="flex justify-between text-cyan-600 font-bold">
                             <span>{labels[2]} နှိမ်ငွေ:</span>
                             <span>- {rejectDeduction.toLocaleString()} Ks</span>
                           </div>
                         )}
                         {other > 0 && (
-                          <div className="flex justify-between text-slate-300 pt-2 border-t border-slate-700/50">
+                          <div className="flex justify-between text-slate-600 pt-2 border-t border-slate-100">
                             <span>အခြားစရိတ်:</span>
-                            <span className="font-bold text-white">+ {other.toLocaleString()} Ks</span>
+                            <span className="font-bold text-slate-800">+ {other.toLocaleString()} Ks</span>
                           </div>
                         )}
                       </div>
                       
-                      <div className="border-t border-slate-700 pt-5 flex justify-between items-end mb-6 relative z-10">
-                        <span className={`text-xs font-bold uppercase tracking-wider ${isRefund ? 'text-cyan-400' : 'text-slate-400'}`}>
+                      <div className="border-t border-slate-200 pt-4 flex justify-between items-end mb-6">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                           {isRefund ? 'စက်မှ ပြန်အမ်းရမည့်ငွေ' : 'ကျသင့်ငွေ (Net Total)'}
                         </span>
-                        <span className={`text-3xl font-black ${isRefund ? 'text-cyan-400' : 'text-white'}`}>
+                        <span className={`text-3xl font-black ${isRefund ? 'text-emerald-600' : 'text-slate-800'}`}>
                           {absNetTotal.toLocaleString()} Ks
                         </span>
                       </div>
 
                       {absNetTotal > 0 && (
-                        <div className={`p-5 rounded-xl border relative z-10 ${isRefund ? 'bg-cyan-900/50 border-cyan-800' : 'bg-slate-800/80 border-slate-700'}`}>
-                          <label className={`block text-xs font-bold mb-2 uppercase tracking-wide ${isRefund ? 'text-cyan-300' : 'text-blue-300'}`}>
+                        <div className={`p-5 rounded-xl border ${isRefund ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'}`}>
+                          <label className={`block text-xs font-bold mb-2 uppercase tracking-wide ${isRefund ? 'text-emerald-800' : 'text-blue-800'}`}>
                             {isRefund ? 'စက်မှ ဖောက်သည်သို့ ပေးသည့်ငွေ' : 'ဖောက်သည် ပေးချေငွေ (Paid Amount)'}
                           </label>
-                          <input type="number" value={billInput.paidAmount} onChange={e=>setBillInput({...billInput, paidAmount: e.target.value})} className={`w-full p-3 border-2 bg-slate-900 text-white rounded-lg outline-none font-bold text-xl ${isRefund ? 'border-cyan-700 focus:border-cyan-500' : 'border-blue-700 focus:border-blue-500'}`} placeholder="0" min="0"/>
+                          <input type="number" value={billInput.paidAmount} onChange={e=>setBillInput({...billInput, paidAmount: e.target.value})} className={`w-full p-3 border-2 bg-white text-slate-900 rounded-lg outline-none font-bold text-xl ${isRefund ? 'border-emerald-300 focus:border-emerald-500' : 'border-blue-300 focus:border-blue-500'}`} placeholder="0" min="0"/>
                           
                           {!isRefund && balance > 0 && paid > 0 && (
-                            <div className="text-xs text-rose-400 font-bold mt-3 bg-rose-400/10 p-2 rounded">ယခုဘောက်ချာအတွက် အကြွေးကျန်ငွေ: {balance.toLocaleString()} Ks</div>
+                            <div className="text-xs text-rose-500 font-bold mt-3 bg-rose-50 p-2 rounded border border-rose-100">ယခုဘောက်ချာအတွက် အကြွေးကျန်ငွေ: {balance.toLocaleString()} Ks</div>
                           )}
                           {isRefund && Math.abs(balance) > 0 && paid > 0 && (
-                            <div className="text-xs text-cyan-400 font-bold mt-3 bg-cyan-400/10 p-2 rounded">ဖောက်သည်ကို ပေးရန်ကျန်ငွေ: {Math.abs(balance).toLocaleString()} Ks</div>
+                            <div className="text-xs text-emerald-600 font-bold mt-3 bg-emerald-50 p-2 rounded border border-emerald-100">ဖောက်သည်ကို ပေးရန်ကျန်ငွေ: {Math.abs(balance).toLocaleString()} Ks</div>
                           )}
                         </div>
                       )}
@@ -877,14 +887,14 @@ export default function MillERP() {
 
                     <div className="flex gap-4 mt-6">
                       <button disabled={isLoading} onClick={() => setActiveJobId(null)} className="px-6 py-4 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors">ပယ်ဖျက်</button>
-                      <button disabled={isLoading} onClick={() => handleBillSubmit(job, totalServiceFee, dryingFee, totalDeduction, netTotal, paid, balance)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg flex items-center justify-center transition-all text-lg">
+                      <button disabled={isLoading} onClick={() => handleBillSubmit(job, totalServiceFee, dryingFee, totalDeduction, netTotal, paid, balance)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 flex items-center justify-center transition-all text-lg">
                         <CheckCircle size={22} className="mr-2"/> ဘေလ်သိမ်းပြီး ငွေရှင်းမည်
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="p-8 flex-1 flex flex-col justify-center items-center bg-slate-50/50">
-                    <button onClick={() => setActiveJobId(job.id)} className="bg-white hover:bg-blue-50 text-blue-600 font-bold py-4 px-8 rounded-2xl transition-all border-2 border-blue-200 shadow-sm flex items-center">
+                  <div className="p-8 flex-1 flex flex-col justify-center items-center bg-slate-50/50 border-t border-slate-100">
+                    <button onClick={() => setActiveJobId(job.id)} className="bg-white hover:bg-blue-50 text-blue-600 font-bold py-4 px-8 rounded-2xl transition-all border-2 border-blue-200 shadow-sm flex items-center hover:scale-105">
                       <Calculator size={22} className="mr-2"/> ဘေလ်တွက်ချက်ရန် နှိပ်ပါ
                     </button>
                   </div>
@@ -897,10 +907,7 @@ export default function MillERP() {
     );
   };
 
-  const CustomerLedgerView = () => {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [expandedCustomer, setExpandedCustomer] = useState(null);
-
+  const renderCustomerLedgerView = () => {
     const customerStats = {};
     jobs.forEach(job => {
       if(!customerStats[job.customer]) {
@@ -939,14 +946,14 @@ export default function MillERP() {
       alert("ငွေစာရင်း မှတ်တမ်းတင်ပြီးပါပြီ။");
     }
 
-    const filteredCustomers = Object.values(customerStats).filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    const filteredCustomers = Object.values(customerStats).filter(c => c.name.toLowerCase().includes(ledgerSearchQuery.toLowerCase()));
 
     return (
       <div className="animate-in fade-in duration-300 relative">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-slate-800 flex items-center"><Users className="mr-3 text-indigo-600"/> ဖောက်သည် မှတ်တမ်း / အကြွေးစာရင်း</h2>
           <div className="relative w-72">
-            <input type="text" placeholder="အမည်ဖြင့် ရှာရန်..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 bg-white font-bold"/>
+            <input type="text" placeholder="အမည်ဖြင့် ရှာရန်..." value={ledgerSearchQuery} onChange={e=>setLedgerSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 bg-white font-bold"/>
             <Search className="absolute left-3.5 top-3 text-slate-400" size={18} />
           </div>
         </div>
@@ -975,11 +982,11 @@ export default function MillERP() {
                   )}
                   {cust.totalDebt < 0 && (
                     <div className="flex items-center gap-3">
-                       <div className="text-right bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100">
-                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">စက်မှ ပေးရန်ကျန်ငွေ</p>
-                        <p className="font-black text-lg text-emerald-700 leading-none">{Math.abs(cust.totalDebt).toLocaleString()} <span className="text-xs font-normal">Ks</span></p>
+                       <div className="text-right bg-green-50 px-4 py-2 rounded-xl border border-green-100">
+                        <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider mb-0.5">စက်မှ ပေးရန်ကျန်ငွေ</p>
+                        <p className="font-black text-lg text-green-700 leading-none">{Math.abs(cust.totalDebt).toLocaleString()} <span className="text-xs font-normal">Ks</span></p>
                       </div>
-                      <button onClick={() => setPaymentModal({customer: cust.name, type: 'pay', debt: Math.abs(cust.totalDebt)})} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm">ငွေရှင်းပေးမည်</button>
+                      <button onClick={() => setPaymentModal({customer: cust.name, type: 'pay', debt: Math.abs(cust.totalDebt)})} className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm">ငွေရှင်းပေးမည်</button>
                     </div>
                   )}
                   <div className="cursor-pointer p-2" onClick={() => setExpandedCustomer(expandedCustomer === cust.name ? null : cust.name)}>
@@ -1042,7 +1049,7 @@ export default function MillERP() {
                               {h.status === 'payment' ? (
                                 <span className="text-emerald-600">Paid: {Math.abs(h.amount).toLocaleString()}</span>
                               ) : h.billData?.netTotal !== undefined ? (
-                                <span className={h.billData.netTotal < 0 ? 'text-cyan-600' : 'text-slate-800'}>
+                                <span className={h.billData.netTotal < 0 ? 'text-green-600' : 'text-slate-800'}>
                                    {h.billData.netTotal < 0 ? `Refund: ${Math.abs(h.billData.netTotal).toLocaleString()}` : h.billData.netTotal.toLocaleString()}
                                 </span> 
                               ) : '-'}
@@ -1050,7 +1057,7 @@ export default function MillERP() {
                             <td className="py-4 px-4 text-right font-black text-[15px]">
                               {h.status !== 'payment' && h.billData?.balance !== undefined ? (
                                 h.billData.balance > 0 ? <span className="text-rose-500">{h.billData.balance.toLocaleString()}</span> : 
-                                h.billData.balance < 0 ? <span className="text-emerald-600">-{Math.abs(h.billData.balance).toLocaleString()}</span> : <span className="text-slate-400">-</span>
+                                h.billData.balance < 0 ? <span className="text-green-600">-{Math.abs(h.billData.balance).toLocaleString()}</span> : <span className="text-slate-400">-</span>
                               ) : '-'}
                             </td>
                           </tr>
@@ -1068,23 +1075,23 @@ export default function MillERP() {
         {paymentModal && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
-              <div className={`px-6 py-5 border-b flex justify-between items-center ${paymentModal.type === 'receive' ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'}`}>
+              <div className={`px-6 py-5 border-b flex justify-between items-center ${paymentModal.type === 'receive' ? 'bg-rose-50 border-rose-100' : 'bg-green-50 border-green-100'}`}>
                 <div>
-                  <h3 className={`font-black text-lg ${paymentModal.type === 'receive' ? 'text-rose-800' : 'text-emerald-800'}`}>{paymentModal.customer}</h3>
-                  <p className={`text-xs font-bold ${paymentModal.type === 'receive' ? 'text-rose-600' : 'text-emerald-600'}`}>{paymentModal.type === 'receive' ? 'အကြွေးလာဆပ်ခြင်း' : 'စက်မှငွေရှင်းပေးခြင်း'}</p>
+                  <h3 className={`font-black text-lg ${paymentModal.type === 'receive' ? 'text-rose-800' : 'text-green-800'}`}>{paymentModal.customer}</h3>
+                  <p className={`text-xs font-bold ${paymentModal.type === 'receive' ? 'text-rose-600' : 'text-green-600'}`}>{paymentModal.type === 'receive' ? 'အကြွေးလာဆပ်ခြင်း' : 'စက်မှငွေရှင်းပေးခြင်း'}</p>
                 </div>
                 <button disabled={isLoading} onClick={() => setPaymentModal(null)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
               </div>
               <form onSubmit={handlePaymentSubmit} className="p-6">
                 <div className="mb-6 text-center">
                   <p className="text-sm font-bold text-slate-500 mb-1">{paymentModal.type === 'receive' ? 'လက်ရှိ အကြွေးကျန်ငွေ' : 'လက်ရှိ ပေးရန်ကျန်ငွေ'}</p>
-                  <p className={`text-3xl font-black ${paymentModal.type === 'receive' ? 'text-rose-600' : 'text-emerald-600'}`}>{paymentModal.debt.toLocaleString()} <span className="text-lg font-medium">Ks</span></p>
+                  <p className={`text-3xl font-black ${paymentModal.type === 'receive' ? 'text-rose-600' : 'text-green-600'}`}>{paymentModal.debt.toLocaleString()} <span className="text-lg font-medium">Ks</span></p>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">ပေးချေမည့် ငွေပမာဏ (ကျပ်)</label>
                   <input type="number" required autoFocus value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)} className="w-full p-4 border-2 border-slate-300 rounded-xl outline-none focus:border-indigo-500 text-xl font-bold text-center" placeholder="0" min="1"/>
                 </div>
-                <button disabled={isLoading} type="submit" className={`w-full mt-6 py-4 rounded-xl text-white font-bold text-lg shadow-lg ${paymentModal.type === 'receive' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
+                <button disabled={isLoading} type="submit" className={`w-full mt-6 py-4 rounded-xl text-white font-bold text-lg shadow-lg ${paymentModal.type === 'receive' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-green-600 hover:bg-green-700'}`}>
                   {isLoading ? 'Processing...' : 'အတည်ပြု မှတ်တမ်းတင်မည်'}
                 </button>
               </form>
@@ -1109,7 +1116,7 @@ export default function MillERP() {
             { id: 'sorting', name: 'Color Sorting ဌာန', icon: ScanLine, color: 'text-indigo-600', activeBg: 'bg-indigo-50 border-indigo-100 shadow-sm' },
             { id: 'warehouse', name: 'သိုလှောင်ရုံ (ဂိုဒေါင်)', icon: Factory, color: 'text-emerald-600', activeBg: 'bg-emerald-50 border-emerald-100 shadow-sm' },
             { id: 'inventory', name: 'စက်ပိုင် ဆန်စာရင်း', icon: Package, color: 'text-cyan-600', activeBg: 'bg-cyan-50 border-cyan-100 shadow-sm' },
-            { id: 'admin', name: 'ငွေစာရင်း (Admin POS)', icon: Calculator, color: 'text-blue-600', activeBg: 'bg-blue-50 border-blue-100 shadow-sm' },
+            { id: 'admin', name: 'ငွေစာရင်း (Admin POS)', icon: Calculator, color: 'text-rose-600', activeBg: 'bg-rose-50 border-rose-100 shadow-sm' },
             { id: 'customers', name: 'ဖောက်သည် / အကြွေးစာရင်း', icon: Users, color: 'text-slate-700', activeBg: 'bg-slate-100 border-slate-200 shadow-sm' },
           ].map(menu => (
             <button 
@@ -1125,13 +1132,13 @@ export default function MillERP() {
       
       <div className="flex-1 overflow-y-auto p-8 relative">
         <div className="max-w-6xl mx-auto">
-          {activeView === 'gate' && <GateView />}
-          {activeView === 'milling' && <MillingView />}
-          {activeView === 'sorting' && <SortingView />}
-          {activeView === 'warehouse' && <WarehouseView />}
-          {activeView === 'inventory' && <InventoryView />}
-          {activeView === 'admin' && <AdminView />}
-          {activeView === 'customers' && <CustomerLedgerView />}
+          {activeView === 'gate' && renderGateView()}
+          {activeView === 'milling' && renderMillingView()}
+          {activeView === 'sorting' && renderSortingView()}
+          {activeView === 'warehouse' && renderWarehouseView()}
+          {activeView === 'inventory' && renderInventoryView()}
+          {activeView === 'admin' && renderAdminView()}
+          {activeView === 'customers' && renderCustomerLedgerView()}
         </div>
       </div>
     </div>
