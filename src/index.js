@@ -47,10 +47,11 @@ export default function MillERP() {
   
   // Drying State
   const [dryingAllocations, setDryingAllocations] = useState([{ machine: '', qty: '' }]);
-  const [dryInput, setDryInput] = useState({ qty: '', storage: '' });
+  const [dryInput, setDryInput] = useState({ storage: '' });
+  const [dryOutputs, setDryOutputs] = useState([]);
 
   // Milling & Sorting State
-  const [millInput, setMillInput] = useState({ rice: '', broken12: '', broken234: '', bran: '' });
+  const [millInput, setMillInput] = useState({ rice: '', broken12: '', broken234: '', bran: '', date: getToday() });
   const [sortInput, setSortInput] = useState({ out1: '', storage1: '', out2: '', storage2: '', out3: '', storage3: '' });
 
   // POS / Admin Billing State
@@ -440,15 +441,22 @@ export default function MillERP() {
     };
 
     const handleDryingDone = async (job) => {
-      if(!dryInput.qty || !dryInput.storage) return alert("ကျန်ရှိတင်း နှင့် သိုလှောင်ရုံနေရာ ထည့်ပါ။");
+      const isValid = dryOutputs.every(o => o.outQty !== '');
+      if(!isValid || !dryInput.storage) return setDialogConfig({title: 'Error', message: 'စက်အလိုက် ကျန်ရှိတင်း နှင့် သိုလှောင်ရုံနေရာ ထည့်ပါ။', onConfirm: ()=>setDialogConfig(null)});
+      
+      const totalOutQty = dryOutputs.reduce((sum, o) => sum + Number(o.outQty), 0);
       const nextStatus = job.purpose === 'dry_only' ? 'ready_to_bill' : 'waiting_mill';
       
       setIsLoading(true);
       await supabase.from('jobs').update({ 
-        currentQty: Number(dryInput.qty), storage: dryInput.storage, moisture: 'အခြောက်', status: nextStatus
+        currentQty: totalOutQty, 
+        storage: dryInput.storage, 
+        moisture: 'အခြောက်', 
+        status: nextStatus,
+        dryingMachines: dryOutputs
       }).eq('id', job.id);
       
-      setActiveJobId(null); setDryInput({ qty: '', storage: '' });
+      setActiveJobId(null); setDryOutputs([]); setDryInput({ storage: '' });
       setIsLoading(false);
     };
 
@@ -480,6 +488,13 @@ export default function MillERP() {
                             <td className="p-3 font-bold text-slate-700">
                                 {job.currentQty} {job.entryType==='paddy' ? 'တင်း' : 'အိတ်'} <br/>
                                 <span className="text-xs text-slate-500 font-medium"><MapPin size={10} className="inline mr-1"/> {job.storage}</span>
+                                {job.dryingMachines && job.dryingMachines[0]?.outQty !== undefined && job.status === 'waiting_mill' && (
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                        {job.dryingMachines.map((dm, idx) => (
+                                            <span key={idx} className="text-[9px] bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-100">{dm.machine}: {dm.outQty} တင်း</span>
+                                        ))}
+                                    </div>
+                                )}
                             </td>
                             <td className="p-3">
                                 {job.status === 'waiting_dry' && (
@@ -535,8 +550,19 @@ export default function MillERP() {
                         {activeJobId === job.id + '-finish' ? (
                             <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
                                 <div>
-                                    <label className="text-xs font-bold text-slate-600 block mb-1">အခြောက်ခံပြီး ကျန်ရှိမည့် တင်း</label>
-                                    <input type="number" value={dryInput.qty} onChange={e=>setDryInput({...dryInput, qty: e.target.value})} className="w-full p-2 border-2 border-red-200 rounded outline-none focus:border-red-500 font-bold text-lg"/>
+                                    <label className="text-xs font-bold text-slate-600 block mb-2">စက်အလိုက် အခြောက်ခံပြီး ကျန်ရှိမည့် တင်း</label>
+                                    <div className="space-y-2 mb-3">
+                                        {dryOutputs.map((out, idx) => (
+                                            <div key={idx} className="flex items-center gap-2 bg-red-50/50 p-2 rounded border border-red-100">
+                                                <span className="text-xs font-bold text-red-900 w-24">{out.machine}</span>
+                                                <input type="number" value={out.outQty} onChange={e => {
+                                                    const newOuts = [...dryOutputs];
+                                                    newOuts[idx].outQty = e.target.value;
+                                                    setDryOutputs(newOuts);
+                                                }} placeholder={`မူလ: ${out.qty}`} className="w-full p-2 border border-red-200 rounded outline-none focus:border-red-500 font-bold text-sm" required/>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-600 block mb-1">သိုလှောင်မည့် နေရာအသစ်</label>
@@ -548,7 +574,11 @@ export default function MillERP() {
                                 </div>
                             </div>
                         ) : (
-                            <button onClick={()=>{setActiveJobId(job.id + '-finish'); setDryInput({qty: job.originalQty, storage: ''});}} className="w-full bg-red-50 text-red-700 py-2.5 rounded-lg text-sm font-bold hover:bg-red-100 border border-red-200">အခြောက်ခံပြီးစီး (လျော့တင်းသွင်းမည်)</button>
+                            <button onClick={()=>{
+                                setActiveJobId(job.id + '-finish'); 
+                                setDryOutputs(job.dryingMachines?.map(dm => ({ ...dm, outQty: dm.qty })) || []);
+                                setDryInput({storage: ''});
+                            }} className="w-full bg-red-50 text-red-700 py-2.5 rounded-lg text-sm font-bold hover:bg-red-100 border border-red-200">အခြောက်ခံပြီးစီး (လျော့တင်းသွင်းမည်)</button>
                         )}
                     </div>
                 ))}
@@ -563,7 +593,7 @@ export default function MillERP() {
     const handleMillDone = async (jobId) => {
       setIsLoading(true);
       await supabase.from('jobs').update({ status: 'waiting_sort', millingData: millInput }).eq('id', jobId);
-      setActiveJobId(null); setMillInput({ rice: '', broken12: '', broken234: '', bran: '' });
+      setActiveJobId(null); setMillInput({ rice: '', broken12: '', broken234: '', bran: '', date: getToday() });
       setIsLoading(false);
     };
     return (
@@ -586,6 +616,10 @@ export default function MillERP() {
               {activeJobId === job.id ? (
                 <div className="bg-purple-50 p-5 rounded-xl border border-purple-100 mt-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="col-span-2 md:col-span-4 mb-2">
+                        <label className="text-xs font-bold text-slate-700 block mb-1">ကြိတ်ခွဲသည့် ရက်စွဲ</label>
+                        <input type="date" value={millInput.date} onChange={e=>setMillInput({...millInput, date: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:border-purple-500 font-bold"/>
+                    </div>
                     <div><label className="text-xs font-bold text-slate-700 block mb-1">ဆန်အကြမ်း (အိတ်)</label><input type="number" value={millInput.rice} onChange={e=>setMillInput({...millInput, rice: e.target.value})} className="w-full p-2.5 border border-purple-300 rounded-lg outline-none font-bold text-lg"/></div>
                     <div><label className="text-xs font-bold text-blue-700 block mb-1">၁၂ ဆန်ကွဲ</label><input type="number" value={millInput.broken12} onChange={e=>setMillInput({...millInput, broken12: e.target.value})} className="w-full p-2.5 border border-blue-200 rounded-lg outline-none font-bold"/></div>
                     <div><label className="text-xs font-bold text-sky-700 block mb-1">၂၃၄ ဆန်ကွဲ</label><input type="number" value={millInput.broken234} onChange={e=>setMillInput({...millInput, broken234: e.target.value})} className="w-full p-2.5 border border-sky-200 rounded-lg outline-none font-bold"/></div>
@@ -634,7 +668,10 @@ export default function MillERP() {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="font-black text-xl text-slate-800">{job.customer}</h3>
-                    <div className="text-sm font-bold text-slate-500 mt-1">{job.id} • {job.paddyType} {isNawali ? '(နဝလီ)' : ''}</div>
+                    <div className="text-sm font-bold text-slate-500 mt-1">
+                        {job.id} • {job.paddyType} {isNawali ? '(နဝလီ)' : ''}
+                        {!isNawali && job.millingData?.date && <span className="ml-2 bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs border border-slate-200">ကြိတ်ရက်: {job.millingData.date}</span>}
+                    </div>
                     <div className="text-indigo-700 font-black mt-2 bg-indigo-50 inline-block px-3 py-1 rounded border border-indigo-100">Raw အဝင်: {rawBags} အိတ်</div>
                   </div>
                   <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-bold">Sort ရန်အသင့်</span>
@@ -917,6 +954,12 @@ export default function MillERP() {
       return (
           <div className="animate-in fade-in duration-300">
              <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><FileSpreadsheet className="mr-3 text-slate-700"/> လက်ကျန်စာရင်း (Opening Stock) ထည့်ရန်</h2>
+             
+             <div className="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl mb-6 text-sm font-bold flex items-start max-w-3xl">
+                <AlertCircle size={18} className="mr-2 mt-0.5 shrink-0"/>
+                <p>သတိပြုရန် - Supabase ၏ 'jobs' ဇယား (Table) တွင် 'itemType' နှင့် 'ownerType' ကော်လံ (Type: text) နှစ်ခုကို အသစ်ထည့်ပေးရန် လိုအပ်ပါသည်။ သို့မှသာ လက်ကျန်စာရင်း သွင်းရာတွင် Error တက်မည် မဟုတ်ပါ။</p>
+             </div>
+
              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-3xl">
                  <form onSubmit={handleAddStock}>
                      <div className="flex bg-slate-100 p-1 rounded-xl mb-6 border border-slate-200 w-full max-w-sm">
@@ -1031,7 +1074,10 @@ export default function MillERP() {
                 <div className="bg-slate-900 p-6 flex justify-between items-center relative overflow-hidden shrink-0">
                   <div className="relative z-10">
                     <h3 className="text-white text-2xl font-black mb-1">{job.customer}</h3>
-                    <p className="text-slate-400 text-sm font-bold">ID: {job.id} | {job.paddyType} | {job.date}</p>
+                    <p className="text-slate-400 text-sm font-bold">
+                        ID: {job.id} | {job.paddyType} | ဝင်ရက်: {job.date}
+                        {job.millingData?.date && ` | ကြိတ်ရက်: ${job.millingData.date}`}
+                    </p>
                   </div>
                   <span className="bg-blue-600 text-white px-5 py-2 rounded-full text-sm font-bold shadow-md relative z-10">ငွေရှင်းရန်</span>
                 </div>
