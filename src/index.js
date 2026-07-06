@@ -1147,9 +1147,9 @@ export default function MillERP() {
             return (
               <div key={job.id} className="bg-white rounded-3xl shadow-md border border-slate-200 overflow-hidden group relative">
                  <button onClick={() => showConfirm(`ဖျက်မှာသေချာလား?`, () => handleDeleteJob(job.id))} className="absolute right-4 top-4 p-2 text-red-200 hover:text-red-400 z-10 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={20}/></button>
-                <div className="bg-slate-800 p-6 text-white relative">
+                <div className="p-6 relative" style={{backgroundColor: '#1e293b', color: '#ffffff'}}>
                   <h3 className="text-2xl font-black mb-1">{job.customer}</h3>
-                  <p className="text-slate-400 text-sm font-bold">ID: {job.id} | {job.paddyType} | {job.date}</p>
+                  <p className="text-sm font-bold" style={{color: '#94a3b8'}}>ID: {job.id} | {job.paddyType} | {job.date}</p>
                 </div>
                 {activeJobId === job.id ? (
                   <div className="p-6 bg-slate-50/50">
@@ -1170,9 +1170,62 @@ export default function MillERP() {
                         <label className="block text-sm font-bold text-slate-800 mb-2">အခြား ကုန်ကျစရိတ်</label>
                         <input type="number" value={billInput.otherExp} onChange={e=>setBillInput({...billInput, otherExp: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:border-blue-500 font-bold text-slate-800"/>
                       </div>
+
+                      {/* စက်သို့ပြန်ရောင်း၍ ခုနှိမ်ခြင်း စနစ် */}
+                      {!isDryOnly && (branQty > 0 || byproductQty > 0 || rejectQty > 0) && (
+                        <div className="bg-cyan-50 p-4 rounded-xl border border-cyan-200 space-y-4">
+                          <h4 className="text-sm font-bold text-cyan-800">စက်သို့ပြန်ရောင်း၍ ခုနှိမ်ခြင်း</h4>
+                          
+                          {branQty > 0 && (
+                            <div className="bg-white p-3 rounded-lg border border-cyan-100">
+                              <label className="text-xs font-bold text-slate-700">ဖွဲနု ({branQty} အိတ်)</label>
+                              <div className="flex gap-4 mt-2 mb-2">
+                                <label className="text-sm font-bold text-slate-600 cursor-pointer"><input type="radio" value="take" checked={billInput.branOption === 'take'} onChange={e=>setBillInput({...billInput, branOption: e.target.value})} className="mr-1"/> ပြန်ယူမည်</label>
+                                <label className="text-sm font-bold text-cyan-700 cursor-pointer"><input type="radio" value="sell" checked={billInput.branOption === 'sell'} onChange={e=>setBillInput({...billInput, branOption: e.target.value})} className="mr-1"/> စက်သို့ရောင်းမည်</label>
+                              </div>
+                              {billInput.branOption === 'sell' && (
+                                <input type="number" value={billInput.branRate} onChange={e=>setBillInput({...billInput, branRate: e.target.value})} className="w-full p-2 border border-cyan-300 rounded outline-none focus:border-cyan-500 text-sm font-bold text-slate-800" placeholder="ဝယ်ယူမည့် နှုန်း (၁ အိတ်) Ks"/>
+                              )}
+                            </div>
+                          )}
+
+                          {byproductQty > 0 && (
+                            <div className="bg-white p-3 rounded-lg border border-cyan-100">
+                              <label className="text-xs font-bold text-slate-700">By-product / ဆန်ကွဲ ({byproductQty} အိတ်)</label>
+                              <div className="flex gap-4 mt-2 mb-2">
+                                <label className="text-sm font-bold text-slate-600 cursor-pointer"><input type="radio" value="take" checked={billInput.byproductOption === 'take'} onChange={e=>setBillInput({...billInput, byproductOption: e.target.value})} className="mr-1"/> ပြန်ယူမည်</label>
+                                <label className="text-sm font-bold text-cyan-700 cursor-pointer"><input type="radio" value="sell" checked={billInput.byproductOption === 'sell'} onChange={e=>setBillInput({...billInput, byproductOption: e.target.value})} className="mr-1"/> စက်သို့ရောင်းမည်</label>
+                              </div>
+                              {billInput.byproductOption === 'sell' && (
+                                <input type="number" value={billInput.byproductRate} onChange={e=>setBillInput({...billInput, byproductRate: e.target.value})} className="w-full p-2 border border-cyan-300 rounded outline-none focus:border-cyan-500 text-sm font-bold text-slate-800" placeholder="ဝယ်ယူမည့် နှုန်း (၁ အိတ်) Ks"/>
+                              )}
+                            </div>
+                          )}
+
+                          {rejectQty > 0 && (
+                            <div className="bg-white p-3 rounded-lg border border-cyan-100">
+                              <label className="text-xs font-bold text-slate-700">Reject / အမည်း ({rejectQty} အိတ်)</label>
+                              <div className="flex gap-4 mt-2 mb-2">
+                                <label className="text-sm font-bold text-slate-600 cursor-pointer"><input type="radio" value="take" checked={billInput.rejectOption === 'take'} onChange={e=>setBillInput({...billInput, rejectOption: e.target.value})} className="mr-1"/> ပြန်ယူမည်</label>
+                                <label className="text-sm font-bold text-cyan-700 cursor-pointer"><input type="radio" value="sell" checked={billInput.rejectOption === 'sell'} onChange={e=>setBillInput({...billInput, rejectOption: e.target.value})} className="mr-1"/> စက်သို့ရောင်းမည်</label>
+                              </div>
+                              {billInput.rejectOption === 'sell' && (
+                                <input type="number" value={billInput.rejectRate} onChange={e=>setBillInput({...billInput, rejectRate: e.target.value})} className="w-full p-2 border border-cyan-300 rounded outline-none focus:border-cyan-500 text-sm font-bold text-slate-800" placeholder="ဝယ်ယူမည့် နှုန်း (၁ အိတ်) Ks"/>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                     </div>
                     
                     <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-6">
+                        {totalDeduction > 0 && (
+                          <div className="flex justify-between items-end mb-4 border-b border-slate-100 pb-4">
+                             <span className="text-xs font-bold text-cyan-700 uppercase">ဖွဲနု/ဆန်ကွဲ စက်သို့ရောင်းငွေ (ခုနှိမ်ငွေ)</span>
+                             <span className="text-lg font-black text-cyan-700">- {totalDeduction.toLocaleString()} Ks</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-end mb-4">
                            <span className="text-xs font-bold text-slate-500 uppercase">{isRefund ? 'စက်မှ ပြန်အမ်းရမည့်ငွေ' : 'ကျသင့်ငွေ (Net Total)'}</span>
                            <span className={`text-2xl font-black ${isRefund ? 'text-green-600' : 'text-slate-800'}`}>{Math.abs(netTotal).toLocaleString()} Ks</span>
@@ -1408,8 +1461,8 @@ export default function MillERP() {
     }
   };
 
-  // Explicit Z-Index and independent overlay wrapper
-  const ModalsOverlay = () => (
+  // Explicit Z-Index and independent overlay wrapper (Changed to function to prevent focus loss)
+  const renderModals = () => (
     <div className="relative z-[9999]">
       {isLoading && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center pointer-events-auto">
@@ -1577,7 +1630,7 @@ export default function MillERP() {
         </div>
       </div>
 
-      <ModalsOverlay />
+      {renderModals()}
     </div>
   );
 }
