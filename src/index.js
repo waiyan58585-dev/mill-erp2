@@ -547,6 +547,7 @@ export default function MillERP() {
       showMessage("ကြိတ်ခွဲရေးဌာနသို့ လွှဲပြောင်းပေးပို့ပြီးပါပြီ။");
     }
 
+   // ... existing code ...
     const handleSendToSort = async (jobId) => {
       setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'waiting_sort' } : j));
       setIsLoading(true);
@@ -610,8 +611,8 @@ export default function MillERP() {
         setIsLoading(false);
     };
 
-    const handleDryingDone = async (job, nextStatusAction) 
-
+    const handleDryingDone = async (job, nextStatusAction) => {
+// ... existing code ...
       
         const updatedJob = { ...job, currentQty: Number(dryQtyInput), storage: dryStorageInput, moisture: 'အခြောက်', status: nextStatusAction };
         setJobs(prev => prev.map(j => j.id === job.id ? updatedJob : j));
