@@ -556,18 +556,63 @@ export default function MillERP() {
     }
 
     const handleStartDrying = async (jobId) => {
-        const isValid = dryingAllocations.every(a => a.machine && a.qty > 0);
-        if(!isValid || dryingAllocations.length === 0) return showMessage("စက်အမည် နှင့် တင်းအရေအတွက် ထည့်ပါ။");
-        setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'drying', dryingMachines: dryingAllocations } : j));
+        const job = jobs.find(j => j.id === jobId);
+        if (!job) return showMessage("စာရင်း ရှာမတွေ့ပါ။");
+
+        const isValid = dryingAllocations.every(a => a.machine && Number(a.qty) > 0);
+        if(!isValid || dryingAllocations.length === 0) return showMessage("စက်အမည် နှင့် တင်းအရေအတွက် အမှန် ထည့်ပါ။");
+
+        const totalDryingQty = dryingAllocations.reduce((sum, a) => sum + Number(a.qty), 0);
+
+        if (totalDryingQty > job.currentQty) {
+            return showMessage(`ထည့်သွင်းသော တင်းစုစုပေါင်း (${totalDryingQty}) သည် လက်ကျန်တင်း (${job.currentQty}) ထက် များနေပါသည်။`);
+        }
+
         setIsLoading(true);
-        await supabase.from('jobs').update({ status: 'drying', dryingMachines: dryingAllocations }).eq('id', jobId);
+
+        if (totalDryingQty < job.currentQty) {
+            // စပါးတစ်ချို့သာထည့်ခြင်း (Partial Allocation - Split Job)
+            const newJobId = `${job.id}-${Date.now().toString().slice(-3)}`;
+            
+            const newJob = {
+                ...job,
+                id: newJobId,
+                originalQty: totalDryingQty,
+                currentQty: totalDryingQty,
+                status: 'drying',
+                dryingMachines: dryingAllocations
+            };
+
+            const updatedOldJob = {
+                ...job,
+                originalQty: job.originalQty - totalDryingQty,
+                currentQty: job.currentQty - totalDryingQty
+            };
+
+            setJobs(prev => prev.map(j => j.id === jobId ? updatedOldJob : j).concat(newJob));
+
+            // Database Update လုပ်ခြင်း
+            await supabase.from('jobs').update({
+                originalQty: updatedOldJob.originalQty,
+                currentQty: updatedOldJob.currentQty
+            }).eq('id', jobId);
+
+            await supabase.from('jobs').insert([newJob]);
+            showMessage(`စပါး ${totalDryingQty} တင်းကို စက်ထဲထည့်ပြီးပါပြီ။ ကျန် ${updatedOldJob.currentQty} တင်း အစိုစာရင်းတွင် ဆက်ရှိနေပါမည်။`);
+        } else {
+            // စပါးအားလုံး အပြည့်ထည့်ခြင်း (Full Allocation)
+            setJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: 'drying', dryingMachines: dryingAllocations } : j));
+            await supabase.from('jobs').update({ status: 'drying', dryingMachines: dryingAllocations }).eq('id', jobId);
+            showMessage("အခြောက်ခံစက်သို့ အပြည့်အဝ ပို့ဆောင်ပြီးပါပြီ။");
+        }
+
         setActiveJobId(null);
         setIsLoading(false);
     };
 
-    const handleDryingDone = async (job, nextStatusAction) => {
-        if(!dryQtyInput || !dryStorageInput) return showMessage("ကျန်ရှိတင်း နှင့် သိုလှောင်ရုံနေရာ ထည့်ပါ။");
-        
+    const handleDryingDone = async (job, nextStatusAction) 
+
+      
         const updatedJob = { ...job, currentQty: Number(dryQtyInput), storage: dryStorageInput, moisture: 'အခြောက်', status: nextStatusAction };
         setJobs(prev => prev.map(j => j.id === job.id ? updatedJob : j));
         
