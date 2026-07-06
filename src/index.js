@@ -175,6 +175,7 @@ export default function MillERP() {
     );
   }
 
+  // မူလမပျက်ခင်ကအတိုင်း လုံးဝပြန်ထားပေးသော Login မျက်နှာပြင်
   if (!session) {
     return (
        <div className="flex items-center justify-center h-screen bg-slate-900">
@@ -238,7 +239,7 @@ export default function MillERP() {
               </div>
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100">
                  <p className="text-xs font-bold text-emerald-600 uppercase mb-2">စက်မှပေးရန်ကျန်သော စာရင်း</p>
-                 <p className="text-3xl font-black text-emerald-600">{toPay > 0 ? toPay.toLocaleString() : 0} <span className="text-base font-bold text-emerald-400">ဘောက်ချာ</span></p>
+                 <p className="text-3xl font-black text-emerald-600">{toPay > 0 ? toPay.toLocaleString() : 0} <span className="text-base font-bold text-emerald-400">Ks</span></p>
               </div>
            </div>
 
@@ -360,7 +361,6 @@ export default function MillERP() {
       const newJobId = `${seq}${suffix}`;
 
       const isWet = newJob.entryType === 'paddy' && newJob.moisture === 'အစို';
-      // Change: Even if wet, goes to waiting_dry (stored in Paddy Warehouse first)
       const initialStatus = newJob.entryType === 'nawali' ? 'waiting_sort' : (isWet ? 'waiting_dry' : 'waiting_mill');
 
       const jobData = {
@@ -466,10 +466,8 @@ export default function MillERP() {
               const remainingQty = currentJob.currentQty - totalDryQty;
               const newSplitJobId = `${currentJob.id}-${Date.now().toString().slice(-4)}`;
               
-              // 1. Update old job to remaining qty (stays waiting_dry)
               await supabase.from('jobs').update({ currentQty: remainingQty, originalQty: remainingQty }).eq('id', jobId);
               
-              // 2. Create new job for drying portion
               const dryingJob = {
                  ...currentJob,
                  id: newSplitJobId,
@@ -751,7 +749,7 @@ export default function MillERP() {
     const finishedJobs = jobs.filter(j => ['ready_to_bill', 'billed'].includes(j.status));
 
     return (
-      <div className="animate-in fade-in duration-300">
+      <div className="animate-in fade-in duration-300 relative z-0">
         <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><Package className="mr-3 text-emerald-600"/> ဆန် နှင့် ထွက်ကုန် ဂိုဒေါင် (Delivery)</h2>
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
@@ -766,7 +764,6 @@ export default function MillERP() {
               <tbody className="divide-y divide-slate-100">
                  {finishedJobs.map(job => {
                     const labels = getSortingLabels(job.paddyType);
-                    // Calculate remaining
                     let rem1 = Number(job.sortingData?.out1 || 0);
                     let rem2 = Number(job.sortingData?.out2 || 0);
                     let rem3 = Number(job.sortingData?.out3 || 0);
@@ -774,14 +771,12 @@ export default function MillERP() {
                     let remB12 = Number(job.millingData?.broken12 || 0);
                     let remB234 = Number(job.millingData?.broken234 || 0);
 
-                    // Deduct mill purchases
                     if (job.billData) {
                        if (job.billData.branOption === 'sell') remBran = 0;
                        if (job.billData.byproductOption === 'sell') rem2 = 0;
                        if (job.billData.rejectOption === 'sell') rem3 = 0;
                     }
 
-                    // Deduct deliveries
                     (job.deliveryLogs || []).forEach(log => {
                        rem1 -= Number(log.out1 || 0);
                        rem2 -= Number(log.out2 || 0);
@@ -851,9 +846,9 @@ export default function MillERP() {
           </div>
         </div>
 
-        {/* Delivery Modal (Static Focus Fix with B12/B234) */}
+        {/* Delivery Modal - High Z-Index & Fixed Focus */}
         {deliveryModal && (
-           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
               <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
                  <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-blue-50">
                     <div>
@@ -927,7 +922,7 @@ export default function MillERP() {
      );
 
      return (
-        <div className="animate-in fade-in duration-300">
+        <div className="animate-in fade-in duration-300 relative z-0">
            <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><Calculator className="mr-3 text-blue-600"/> ငွေစာရင်း (Admin POS) ဌာန</h2>
            <div className="bg-white p-6 rounded-2xl border border-slate-200 mb-8 shadow-sm">
               <label className="block text-sm font-bold text-slate-700 mb-3">ဘောက်ချာ ဖွင့်ရန် / ငွေရှင်းရန် ရှာဖွေပါ</label>
@@ -1068,7 +1063,7 @@ export default function MillERP() {
      const filteredCustomers = Object.values(customerStats).filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
      return (
-        <div className="animate-in fade-in duration-300">
+        <div className="animate-in fade-in duration-300 relative z-0">
            <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-slate-800 flex items-center"><Users className="mr-3 text-blue-600"/> ဖောက်သည် မှတ်တမ်း / အကြွေးစာရင်း</h2>
               <div className="relative w-72">
@@ -1116,9 +1111,9 @@ export default function MillERP() {
               ))}
            </div>
 
-           {/* Static Payment Modal */}
+           {/* Payment Modal - High Z-Index for Freeze Fix */}
            {paymentModal && (
-              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
                  <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95">
                     <div className={`px-6 py-5 border-b flex justify-between items-center ${paymentModal.type === 'receive' ? 'bg-rose-50' : 'bg-emerald-50'}`}>
                        <h3 className="font-black text-lg">{paymentModal.customer}</h3>
@@ -1140,13 +1135,11 @@ export default function MillERP() {
   const renderInventoryView = () => {
      let totals = { fine: 0, b12: 0, b234: 0, bran: 0, byproduct: 0, reject: 0 };
      jobs.forEach(j => {
-        // From billing deductions
         if (j.status === 'billed' && j.billData) {
            if (j.billData.branOption === 'sell') totals.bran += Number(j.millingData?.bran || 0);
            if (j.billData.byproductOption === 'sell') totals.byproduct += Number(j.sortingData?.out2 || 0);
            if (j.billData.rejectOption === 'sell') totals.reject += Number(j.sortingData?.out3 || 0);
         }
-        // From opening stock directly inserted to inventory
         if (j.status === 'opening_stock' && j.ownerType === 'စက်ပိုင်') {
            if (j.itemType === 'ဆန်အချော') totals.fine += Number(j.currentQty);
            if (j.itemType === '၁၂ ဆန်ကွဲ') totals.b12 += Number(j.currentQty);
@@ -1183,9 +1176,7 @@ export default function MillERP() {
          try {
              const newJobId = `OP-${Date.now().toString().slice(-6)}`;
              let status = 'opening_stock'; 
-             // If customer paddy, put it in waiting_dry to show in Paddy Warehouse
              if (openingStockInput.ownerType === 'ကုန်သည်ပိုင်' && openingStockInput.itemType === 'စပါး') status = 'waiting_dry';
-             // If customer rice/broken, put it in ready_to_bill to show in Rice Warehouse
              if (openingStockInput.ownerType === 'ကုန်သည်ပိုင်' && openingStockInput.itemType !== 'စပါး') status = 'ready_to_bill';
 
              const jobData = {
@@ -1196,7 +1187,6 @@ export default function MillERP() {
                  ownerType: openingStockInput.ownerType, itemType: openingStockInput.itemType
              };
 
-             // If it's customer rice products, we need to map to sortingData or millingData so it shows in Rice Warehouse remaining logic
              if (status === 'ready_to_bill') {
                  if(openingStockInput.itemType === 'ဆန်အချော') jobData.sortingData = { out1: openingStockInput.qty, storage1: openingStockInput.storage };
                  else if(openingStockInput.itemType === '၁၂ ဆန်ကွဲ') jobData.millingData = { broken12: openingStockInput.qty };
@@ -1318,9 +1308,9 @@ export default function MillERP() {
         </div>
       </div>
 
-      {/* Global Alert Modal (Static Focus Fix) */}
+      {/* Global Alert Modal - HIGH Z-INDEX FOR FIX */}
       {alertConfig && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 p-6 text-center">
                 {alertConfig.type === 'danger' ? <AlertCircle size={48} className="mx-auto text-rose-500 mb-4"/> : <CheckSquare size={48} className="mx-auto text-emerald-500 mb-4"/>}
                 <p className="font-bold text-slate-800 text-lg mb-6">{alertConfig.message}</p>
