@@ -351,8 +351,7 @@ export default function MillERP() {
       const newJobId = `${seq}${suffix}`;
 
       const isWet = newJob.entryType === 'paddy' && newJob.moisture === 'အစို';
-      // *** CHANGE: ALWAYS GO TO WAREHOUSE FIRST ***
-      // If paddy -> waiting_dry (if wet) or waiting_mill (if dry). ALL go to warehouse.
+      // ALWAYS GO TO WAREHOUSE FIRST
       const initialStatus = newJob.entryType === 'nawali' ? 'waiting_sort' : (isWet ? 'waiting_dry' : 'waiting_mill');
 
       const jobData = {
@@ -1299,7 +1298,6 @@ export default function MillERP() {
                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center"><Edit3 size={14} className="mr-1"/> မှတ်ချက်</label>
                      <textarea className="w-full p-3 text-sm border border-slate-300 rounded-lg outline-none focus:border-blue-500 resize-none h-16 bg-slate-50" placeholder="မှတ်ချက်ရေးရန်..." value={customerRemarks[cust.name] || ''} onChange={e => updateRemark(cust.name, e.target.value)} />
                   </div>
-                  {/* History table simplified for brevity */}
                 </div>
               )}
             </div>
@@ -1343,22 +1341,6 @@ export default function MillERP() {
               <button onClick={() => setConfirmConfig(null)} className="flex-1 bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl hover:bg-slate-200">မလုပ်တော့ပါ</button>
               <button onClick={() => { confirmConfig.onConfirm(); setConfirmConfig(null); }} className="flex-1 bg-red-600 text-white font-bold py-3.5 rounded-xl hover:bg-red-700 shadow-md">သေချာသည်</button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delivery Modal */}
-      {deliveryModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="bg-blue-600 px-6 py-4 flex justify-between items-center text-white">
-              <h3 className="font-bold text-lg flex items-center"><Truck size={20} className="mr-2"/> ဆန်ထုတ်ပေးရန် (Delivery)</h3>
-              <button onClick={() => setDeliveryModal(null)} className="hover:text-blue-200"><X size={24}/></button>
-            </div>
-            <form onSubmit={renderRiceWarehouseView().props.children[1].props.children.props.children[1].props.children.find(c => c.key === deliveryModal.id).props.children[2].props.children.props.onClick} className="p-6">
-               {/* Simplified the form mapping for safety, using direct state injection logic handled within component */}
-               {/* Note: The actual onSubmit is bound below in a safer way */}
-            </form>
           </div>
         </div>
       )}
