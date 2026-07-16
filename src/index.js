@@ -1187,7 +1187,7 @@ export default function MillERP() {
       if(!customerStats[job.customer]) customerStats[job.customer] = { name: job.customer, totalPaddy: 0, totalRice: 0, totalDebt: 0, totalPayable: 0, history: [] };
       const stat = customerStats[job.customer];
       
-      if (job.entryType === 'paddy' && job.status !== 'payment') stat.totalPaddy += Number(job.originalQty||0);
+      if ((job.entryType === 'paddy' || (job.entryType === 'opening_stock' && job.itemType === 'စပါး')) && job.status !== 'payment') stat.totalPaddy += Number(job.originalQty||0);
       if (job.status === 'ready_to_bill' || job.status === 'billed') {
         if (job.purpose !== 'dry_only') stat.totalRice += Number(job.sortingData?.out1 || 0);
       }
