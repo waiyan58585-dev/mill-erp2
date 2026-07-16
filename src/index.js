@@ -74,6 +74,7 @@ export default function MillERP() {
   // Customer Ledger State
   const [ledgerSearchQuery, setLedgerSearchQuery] = useState('');
   const [expandedCustomer, setExpandedCustomer] = useState(null);
+  const [ledgerTab, setLedgerTab] = useState('paddy'); // ADDED: For separating paddy, rice, and finance views
   const [paymentModal, setPaymentModal] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
 
@@ -1322,38 +1323,152 @@ export default function MillERP() {
               </div>
 
               {expandedCustomer === cust.name && (
-                <div className="p-4 border-t border-slate-200 bg-white">
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="p-0 border-t border-slate-200 bg-white">
+                  <div className="grid grid-cols-2 gap-4 p-4">
                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
                         <p className="text-xs font-bold text-slate-500 uppercase mb-1">စုစုပေါင်း စပါးအဝင်</p>
-                        <p className="font-black text-xl text-slate-800">{cust.totalPaddy} တင်း</p>
+                        <p className="font-black text-xl text-slate-800">{cust.totalPaddy} <span className="text-sm font-medium">တင်း</span></p>
                      </div>
                      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-center">
                         <p className="text-xs font-bold text-blue-600 uppercase mb-1">ထုတ်ယူပြီး ဆန်အချော</p>
-                        <p className="font-black text-xl text-blue-800">{cust.totalRice} အိတ်</p>
+                        <p className="font-black text-xl text-blue-800">{cust.totalRice} <span className="text-sm font-medium">အိတ်</span></p>
                      </div>
                   </div>
-                  <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
-                        <tr><th className="p-3 font-bold">ရက်စွဲ/ID</th><th className="p-3 font-bold">အမျိုးအစား</th><th className="p-3 font-bold text-right">ကျသင့်ငွေ/ပေးချေငွေ</th><th className="p-3 font-bold text-right">အကြွေး / ပေးရန်ကျန်</th></tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {cust.history.map(h => (
-                          <tr key={h.id}>
-                            <td className="p-3"><div className="font-bold">{h.date}</div><div className="text-xs text-slate-500">{h.id}</div></td>
-                            <td className="p-3">{h.status === 'payment' ? <span className="text-emerald-600 font-bold">ငွေပေးချေမှု</span> : <span className="font-bold">{h.paddyType}</span>}</td>
-                            <td className="p-3 text-right font-black">
-                               {h.status === 'payment' ? <span className="text-emerald-600">{Math.abs(h.amount).toLocaleString()}</span> : h.billData?.netTotal ? h.billData.netTotal.toLocaleString() : '-'}
-                            </td>
-                            <td className="p-3 text-right font-black text-rose-500">
-                                {h.status !== 'payment' && h.billData?.balance !== undefined ? h.billData.balance.toLocaleString() : '-'}
-                                {session?.role==='admin' && <button onClick={()=>handleDelete(h.id)} className="ml-3 text-red-500"><Trash2 size={14} className="inline"/></button>}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+
+                  {/* Tabs Section */}
+                  <div className="flex bg-slate-50 border-b border-slate-200 px-4 pt-2 gap-6">
+                    <button onClick={() => setLedgerTab('paddy')} className={`pb-3 text-sm font-bold border-b-2 transition-colors ${ledgerTab === 'paddy' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>စပါးအဝင် မှတ်တမ်း</button>
+                    <button onClick={() => setLedgerTab('rice')} className={`pb-3 text-sm font-bold border-b-2 transition-colors ${ledgerTab === 'rice' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>ဆန်/ထွက်ကုန် မှတ်တမ်း</button>
+                    <button onClick={() => setLedgerTab('finance')} className={`pb-3 text-sm font-bold border-b-2 transition-colors ${ledgerTab === 'finance' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>ငွေစာရင်း မှတ်တမ်း</button>
+                  </div>
+
+                  <div className="overflow-x-auto p-4 border-b border-slate-200">
+                    
+                    {/* Paddy History Tab */}
+                    {ledgerTab === 'paddy' && (
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
+                            <tr>
+                              <th className="p-3 font-bold">ရက်စွဲ / ID</th>
+                              <th className="p-3 font-bold">စပါး/အမျိုးအစား</th>
+                              <th className="p-3 font-bold text-right">အဝင်အရေအတွက်</th>
+                              <th className="p-3 font-bold text-center">အစို/အခြောက်</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-slate-800">
+                            {cust.history.filter(h => (h.entryType === 'paddy' || h.entryType === 'nawali' || (h.entryType === 'opening_stock' && h.itemType === 'စပါး')) && h.status !== 'payment').map(h => (
+                              <tr key={h.id} className="hover:bg-slate-50">
+                                <td className="p-3">
+                                  <div className="font-bold">{h.date}</div>
+                                  <div className="text-xs text-slate-500">{h.id}</div>
+                                </td>
+                                <td className="p-3 font-bold">
+                                  {h.paddyType || h.itemType} <span className="text-xs text-slate-400 font-normal">({h.entryType === 'nawali' ? 'နဝလီ' : 'စပါး'})</span>
+                                </td>
+                                <td className="p-3 text-right font-black">
+                                  {h.originalQty} <span className="text-sm font-medium text-slate-500">{h.entryType === 'paddy' || (h.entryType === 'opening_stock' && h.itemType === 'စပါး') ? 'တင်း' : 'အိတ်'}</span>
+                                </td>
+                                <td className="p-3 text-center">
+                                  {h.moisture ? <span className={`px-2 py-1 rounded text-xs font-bold ${h.moisture === 'အစို' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>{h.moisture}</span> : '-'}
+                                </td>
+                              </tr>
+                            ))}
+                            {cust.history.filter(h => (h.entryType === 'paddy' || h.entryType === 'nawali' || (h.entryType === 'opening_stock' && h.itemType === 'စပါး')) && h.status !== 'payment').length === 0 && (
+                               <tr><td colSpan="4" className="p-6 text-center text-slate-400 font-bold">မှတ်တမ်းမရှိပါ</td></tr>
+                            )}
+                          </tbody>
+                        </table>
+                    )}
+
+                    {/* Rice / Products History Tab */}
+                    {ledgerTab === 'rice' && (
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
+                            <tr>
+                              <th className="p-3 font-bold">ရက်စွဲ / ID</th>
+                              <th className="p-3 font-bold">အမျိုးအစား</th>
+                              <th className="p-3 font-bold">ဆန်အချော / ဆန်ကွဲ</th>
+                              <th className="p-3 font-bold">ဖွဲနု / အခြား</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-slate-800">
+                            {cust.history.filter(h => (h.status === 'ready_to_bill' || h.status === 'billed' || (h.entryType === 'opening_stock' && h.itemType !== 'စပါး')) && h.purpose !== 'dry_only').map(h => {
+                              const labels = getSortingLabels(h.paddyType || h.itemType);
+                              return (
+                              <tr key={h.id} className="hover:bg-slate-50">
+                                <td className="p-3">
+                                  <div className="font-bold">{h.date}</div>
+                                  <div className="text-xs text-slate-500">{h.id}</div>
+                                </td>
+                                <td className="p-3 font-bold">
+                                  {h.paddyType || h.itemType}
+                                </td>
+                                <td className="p-3">
+                                  <div className="flex flex-col gap-1">
+                                    {h.sortingData?.out1 > 0 && <span className="text-xs font-bold text-emerald-600">{labels[0]}: {h.sortingData.out1} အိတ်</span>}
+                                    {h.millingData?.broken12 > 0 && <span className="text-xs font-bold text-blue-600">၁၂ ဆန်ကွဲ: {h.millingData.broken12} အိတ်</span>}
+                                    {h.millingData?.broken234 > 0 && <span className="text-xs font-bold text-sky-600">၂၃၄ ဆန်ကွဲ: {h.millingData.broken234} အိတ်</span>}
+                                    {!h.sortingData?.out1 && !h.millingData?.broken12 && !h.millingData?.broken234 && <span className="text-slate-400">-</span>}
+                                  </div>
+                                </td>
+                                <td className="p-3">
+                                  <div className="flex flex-col gap-1">
+                                    {h.millingData?.bran > 0 && <span className="text-xs font-bold text-amber-600">ဖွဲနု: {h.millingData.bran} အိတ်</span>}
+                                    {h.sortingData?.out2 > 0 && <span className="text-xs font-bold text-slate-600">By-product: {h.sortingData.out2} အိတ်</span>}
+                                    {h.sortingData?.out3 > 0 && <span className="text-xs font-bold text-rose-600">Reject: {h.sortingData.out3} အိတ်</span>}
+                                    {!h.millingData?.bran && !h.sortingData?.out2 && !h.sortingData?.out3 && <span className="text-slate-400">-</span>}
+                                  </div>
+                                </td>
+                              </tr>
+                            )})}
+                            {cust.history.filter(h => (h.status === 'ready_to_bill' || h.status === 'billed' || (h.entryType === 'opening_stock' && h.itemType !== 'စပါး')) && h.purpose !== 'dry_only').length === 0 && (
+                               <tr><td colSpan="4" className="p-6 text-center text-slate-400 font-bold">မှတ်တမ်းမရှိပါ</td></tr>
+                            )}
+                          </tbody>
+                        </table>
+                    )}
+
+                    {/* Finance / Transactions Tab */}
+                    {ledgerTab === 'finance' && (
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
+                            <tr>
+                              <th className="p-3 font-bold">ရက်စွဲ/ID</th>
+                              <th className="p-3 font-bold">အမျိုးအစား/အကြောင်းအရာ</th>
+                              <th className="p-3 font-bold text-right">ကျသင့်ငွေ/ပေးချေငွေ</th>
+                              <th className="p-3 font-bold text-right">အကြွေး / ပေးရန်ကျန်</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {cust.history.filter(h => h.status === 'payment' || h.status === 'billed' || h.status === 'ready_to_bill').map(h => (
+                              <tr key={h.id} className="hover:bg-slate-50">
+                                <td className="p-3">
+                                  <div className="font-bold">{h.date}</div>
+                                  <div className="text-xs text-slate-500">{h.id}</div>
+                                </td>
+                                <td className="p-3">
+                                  {h.status === 'payment' ? <span className="text-emerald-600 font-bold">ငွေပေးချေမှု / ကြွေးဆပ်ခြင်း</span> : (
+                                    <div>
+                                      <span className="font-bold">{h.paddyType || h.itemType}</span> <span className="text-xs text-slate-400">({h.entryType === 'nawali' ? 'နဝလီ' : h.itemType ? h.itemType : 'စက်ကြိတ်'})</span><br/>
+                                      {h.status === 'billed' ? <span className="text-[10px] text-blue-600 font-bold uppercase mt-1 inline-block">ဘေလ်ရှင်းပြီး</span> : <span className="text-[10px] text-amber-600 font-bold uppercase mt-1 inline-block">ဘေလ်ရှင်းရန်ကျန်</span>}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="p-3 text-right font-black">
+                                   {h.status === 'payment' ? <span className="text-emerald-600">{Math.abs(h.amount).toLocaleString()}</span> : h.billData?.netTotal ? h.billData.netTotal.toLocaleString() : '-'}
+                                </td>
+                                <td className="p-3 text-right font-black text-rose-500">
+                                    {h.status !== 'payment' && h.billData?.balance !== undefined ? h.billData.balance.toLocaleString() : '-'}
+                                    {session?.role==='admin' && <button onClick={()=>handleDelete(h.id)} className="ml-3 text-red-500"><Trash2 size={14} className="inline"/></button>}
+                                </td>
+                              </tr>
+                            ))}
+                            {cust.history.filter(h => h.status === 'payment' || h.status === 'billed' || h.status === 'ready_to_bill').length === 0 && (
+                               <tr><td colSpan="4" className="p-6 text-center text-slate-400 font-bold">မှတ်တမ်းမရှိပါ</td></tr>
+                            )}
+                          </tbody>
+                        </table>
+                    )}
                   </div>
                 </div>
               )}
