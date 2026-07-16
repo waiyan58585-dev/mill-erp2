@@ -76,9 +76,9 @@ export default function MillERP() {
   const [paymentModal, setPaymentModal] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
 
-  // Opening Stock State
+  // Opening Stock State (paddyType field added for split inputs)
   const [openingStockInput, setOpeningStockInput] = useState({
-     ownerType: 'စက်ပိုင်', customerName: '',
+     ownerType: 'စက်ပိုင်', customerName: '', paddyType: '',
      itemType: 'စပါး', qty: '', storage: ''
   });
 
@@ -514,7 +514,7 @@ export default function MillERP() {
                                             <button onClick={handleAddAllocation} className="text-xs text-blue-600 font-bold mb-4">+ စက်ထပ်ထည့်မည်</button>
                                             <div className="flex gap-2">
                                                 <button onClick={()=>setActiveJobId(null)} className="flex-1 py-2.5 border-2 rounded-lg font-bold text-sm bg-slate-50">ပယ်ဖျက်</button>
-                                                <button onClick={()=>handleStartDrying(job.id)} className="flex-1 py-2.5 bg-amber-500 text-white rounded-lg font-bold text-sm shadow-md">စက်ထဲ ထည့်မည်</button>
+                                                <button onClick={()=>handleStartDrying(job.id)} className="flex-1 py-2.5 bg-amber-50 text-amber-700 rounded-lg font-bold text-sm border border-amber-200 hover:bg-amber-100">စက်ထဲ ထည့်မည်</button>
                                             </div>
                                         </div>
                                     ) : (
@@ -922,7 +922,7 @@ export default function MillERP() {
               ownerType: openingStockInput.ownerType,
               customer: openingStockInput.ownerType === 'စက်ပိုင်' ? 'စက်ပိုင်' : openingStockInput.customerName,
               itemType: openingStockInput.itemType,
-              paddyType: openingStockInput.itemType === 'စပါး' ? 'မသတ်မှတ်' : openingStockInput.itemType,
+              paddyType: openingStockInput.ownerType === 'ကုန်သည်ပိုင်' ? (openingStockInput.paddyType || 'မသတ်မှတ်') : (openingStockInput.itemType === 'စပါး' ? 'မသတ်မှတ်' : openingStockInput.itemType),
               originalQty: Number(openingStockInput.qty), 
               currentQty: Number(openingStockInput.qty),
               storage: openingStockInput.storage || '-',
@@ -946,7 +946,7 @@ export default function MillERP() {
               setDialogConfig({title:'Error', message:error.message, onConfirm:()=>setDialogConfig(null)});
           } else {
               setDialogConfig({title:'အောင်မြင်ပါသည်', message:'လက်ကျန်စာရင်း သွင်းပြီးပါပြီ', onConfirm:()=>setDialogConfig(null)});
-              setOpeningStockInput({...openingStockInput, qty: '', storage: ''});
+              setOpeningStockInput({...openingStockInput, qty: '', storage: '', customerName: '', paddyType: ''});
           }
           setIsLoading(false);
       };
@@ -981,10 +981,16 @@ export default function MillERP() {
                             </select>
                         </div>
                         {openingStockInput.ownerType === 'ကုန်သည်ပိုင်' && (
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 mb-2">စပါး/ဆန် အမည် သို့ ဖောက်သည်အမည်</label>
-                                <input type="text" value={openingStockInput.customerName} onChange={e=>setOpeningStockInput({...openingStockInput, customerName: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-800" placeholder="ဥပမာ - ပေါ်ဆန်း" required/>
-                            </div>
+                            <>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 mb-2">ဖောက်သည်အမည်</label>
+                                    <input type="text" value={openingStockInput.customerName} onChange={e=>setOpeningStockInput({...openingStockInput, customerName: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-800" placeholder="ဥပမာ - ဦးအောင်" required/>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 mb-2">စပါး/ဆန် အမျိုးအစား</label>
+                                    <input type="text" value={openingStockInput.paddyType} onChange={e=>setOpeningStockInput({...openingStockInput, paddyType: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-800" placeholder="ဥပမာ - ပေါ်ဆန်း" required/>
+                                </div>
+                            </>
                         )}
                         <div>
                             <label className="block text-xs font-bold text-slate-600 mb-2">အရေအတွက် (တင်း/အိတ်)</label>
