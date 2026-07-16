@@ -80,7 +80,7 @@ export default function MillERP() {
   // Opening Stock State (paddyType field added for split inputs)
   const [openingStockInput, setOpeningStockInput] = useState({
      ownerType: 'စက်ပိုင်', customerName: '', paddyType: '',
-     itemType: 'စပါး', qty: '', storage: ''
+     itemType: 'စပါး', qty: '', storage: '', moisture: 'အစို'
   });
 
   useEffect(() => {
@@ -969,17 +969,23 @@ export default function MillERP() {
           setIsLoading(true);
           const newId = `OS-${Date.now().toString().slice(-6)}`;
           
+          const isWet = openingStockInput.itemType === 'စပါး' && openingStockInput.moisture === 'အစို';
+          const initialStatus = openingStockInput.itemType === 'စပါး' ? (isWet ? 'waiting_dry' : 'waiting_mill') : 'ready_to_bill';
+          
           const jobData = {
               id: newId, 
               entryType: 'opening_stock', 
+              purpose: openingStockInput.itemType === 'စပါး' ? 'mill' : undefined,
               ownerType: openingStockInput.ownerType,
               customer: openingStockInput.ownerType === 'စက်ပိုင်' ? 'စက်ပိုင်' : openingStockInput.customerName,
               itemType: openingStockInput.itemType,
               paddyType: openingStockInput.ownerType === 'ကုန်သည်ပိုင်' ? (openingStockInput.paddyType || 'မသတ်မှတ်') : (openingStockInput.itemType === 'စပါး' ? 'မသတ်မှတ်' : openingStockInput.itemType),
               originalQty: Number(openingStockInput.qty), 
               currentQty: Number(openingStockInput.qty),
+              moisture: openingStockInput.itemType === 'စပါး' ? openingStockInput.moisture : undefined,
+              wasWet: isWet,
               storage: openingStockInput.storage || '-',
-              status: openingStockInput.itemType === 'စပါး' ? 'waiting_dry' : 'ready_to_bill',
+              status: initialStatus,
               date: getToday(),
               deliveryLogs: []
           };
@@ -999,7 +1005,7 @@ export default function MillERP() {
               setDialogConfig({title:'Error', message:error.message, onConfirm:()=>setDialogConfig(null)});
           } else {
               setDialogConfig({title:'အောင်မြင်ပါသည်', message:'လက်ကျန်စာရင်း သွင်းပြီးပါပြီ', onConfirm:()=>setDialogConfig(null)});
-              setOpeningStockInput({...openingStockInput, qty: '', storage: '', customerName: '', paddyType: ''});
+              setOpeningStockInput({...openingStockInput, qty: '', storage: '', customerName: '', paddyType: '', moisture: 'အစို'});
           }
           setIsLoading(false);
       };
@@ -1044,6 +1050,15 @@ export default function MillERP() {
                                     <input type="text" value={openingStockInput.paddyType} onChange={e=>setOpeningStockInput({...openingStockInput, paddyType: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-800" placeholder="ဥပမာ - ပေါ်ဆန်း" required/>
                                 </div>
                             </>
+                        )}
+                        {openingStockInput.itemType === 'စပါး' && (
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 mb-2">အစို / အခြောက်</label>
+                                <select value={openingStockInput.moisture} onChange={e=>setOpeningStockInput({...openingStockInput, moisture: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-800">
+                                   <option value="အစို">အစို (အခြောက်ခံမည်)</option>
+                                   <option value="အခြောက်">အခြောက် (တိုက်ရိုက်ကြိတ်မည်)</option>
+                                </select>
+                            </div>
                         )}
                         <div>
                             <label className="block text-xs font-bold text-slate-600 mb-2">အရေအတွက် (တင်း/အိတ်)</label>
