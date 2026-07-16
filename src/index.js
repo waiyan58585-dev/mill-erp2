@@ -51,7 +51,8 @@ export default function MillERP() {
   const [dryOutputs, setDryOutputs] = useState([]);
 
   // Milling & Sorting State
-  const [millInput, setMillInput] = useState({ rice: '', broken12: '', broken234: '', bran: '', date: getToday() });
+  const [millingSearchQuery, setMillingSearchQuery] = useState('');
+  const [millInput, setMillInput] = useState({ rice: '', broken12: '', broken234: '', bran: '', date: getToday(), millQty: '' });
   const [sortInput, setSortInput] = useState({ out1: '', storage1: '', out2: '', storage2: '', out3: '', storage3: '' });
 
   // POS / Admin Billing State
@@ -591,16 +592,55 @@ export default function MillERP() {
 
   const renderMillingView = () => {
     const handleMillDone = async (jobId) => {
+      const job = jobs.find(j => j.id === jobId);
+      const qtyToMill = millInput.millQty ? Number(millInput.millQty) : job.currentQty;
+
+      if (qtyToMill <= 0 || qtyToMill > job.currentQty) {
+          return setDialogConfig({ title: 'Error', message: `ကြိတ်မည့်တင်း အရေအတွက် မှားယွင်းနေပါသည်။ အများဆုံး ${job.currentQty} တင်းသာ ကြိတ်နိုင်ပါသည်။`, onConfirm: () => setDialogConfig(null) });
+      }
+
       setIsLoading(true);
-      await supabase.from('jobs').update({ status: 'waiting_sort', millingData: millInput }).eq('id', jobId);
-      setActiveJobId(null); setMillInput({ rice: '', broken12: '', broken234: '', bran: '', date: getToday() });
+
+      if (qtyToMill < job.currentQty) {
+          // Split the job (စပါးခွဲကြိတ်ခြင်း)
+          const remainingQty = job.currentQty - qtyToMill;
+          const newJobId = `${job.id}-M${Date.now().toString().slice(-4)}`;
+          const milledJob = { ...job, id: newJobId, currentQty: qtyToMill, originalQty: qtyToMill, status: 'waiting_sort', millingData: millInput };
+          
+          await supabase.from('jobs').insert([milledJob]);
+          await supabase.from('jobs').update({ currentQty: remainingQty }).eq('id', job.id);
+      } else {
+          // Mill full amount (အကုန်ကြိတ်ခြင်း)
+          await supabase.from('jobs').update({ status: 'waiting_sort', millingData: millInput }).eq('id', jobId);
+      }
+
+      setActiveJobId(null); 
+      setMillInput({ rice: '', broken12: '', broken234: '', bran: '', date: getToday(), millQty: '' });
       setIsLoading(false);
     };
+
+    // Filter jobs based on search query
+    const filteredJobs = jobs.filter(j => 
+      j.status === 'waiting_mill' && 
+      j.purpose === 'mill' && 
+      (!millingSearchQuery || j.customer.toLowerCase().includes(millingSearchQuery.toLowerCase()) || j.id.toLowerCase().includes(millingSearchQuery.toLowerCase()))
+    );
+
     return (
       <div className="animate-in fade-in duration-300">
         <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><Tractor className="mr-3 text-purple-600"/> ကြိတ်ခွဲရေး ဌာန</h2>
+        
+        {}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 mb-6 shadow-sm">
+            <label className="block text-sm font-bold text-slate-700 mb-3">ကုန်သည်အမည် ဖြင့် ရှာဖွေပါ (စပါးခွဲကြိတ်ရန်)</label>
+            <div className="relative max-w-xl">
+                <input type="text" placeholder="ကုန်သည်အမည် (သို့) ဘောက်ချာ ID ရိုက်ထည့်ပါ..." value={millingSearchQuery} onChange={e => setMillingSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-3.5 border-2 border-slate-200 rounded-xl outline-none focus:border-purple-500 font-bold text-slate-900 bg-slate-50"/>
+                <Search className="absolute left-4 top-4 text-slate-400" size={20} />
+            </div>
+        </div>
+
         <div className="space-y-4">
-          {jobs.filter(j => j.status === 'waiting_mill' && j.purpose === 'mill').map(job => (
+          {filteredJobs.map(job => (
             <div key={job.id} className="bg-white p-6 rounded-2xl border-l-4 border-l-purple-500 shadow-sm border border-slate-200">
               <div className="flex justify-between items-start mb-4">
                 <div>
@@ -615,6 +655,19 @@ export default function MillERP() {
               
               {activeJobId === job.id ? (
                 <div className="bg-purple-50 p-5 rounded-xl border border-purple-100 mt-4">
+                  
+                  {}
+                  <div className="mb-4 p-4 bg-white rounded-lg border border-purple-200 shadow-sm flex items-center justify-between">
+                      <div>
+                          <label className="text-sm font-black text-purple-900 block mb-1">ယခု ကြိတ်မည့် စပါးပမာဏ (တင်း)</label>
+                          <p className="text-xs text-slate-500 font-bold">မူလလက်ကျန်: {job.currentQty} တင်း</p>
+                      </div>
+                      <div className="relative w-1/2 md:w-1/3">
+                          <input type="number" value={millInput.millQty} onChange={e => setMillInput({...millInput, millQty: e.target.value})} placeholder={`Max: ${job.currentQty}`} className="w-full p-2.5 border-2 border-purple-300 rounded-lg outline-none focus:border-purple-500 font-black text-lg text-purple-700" max={job.currentQty} min="1"/>
+                          <span className="absolute right-3 top-3.5 text-sm font-bold text-slate-400">တင်း</span>
+                      </div>
+                  </div>
+
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                     <div className="col-span-2 md:col-span-4 mb-2">
                         <label className="text-xs font-bold text-slate-700 block mb-1">ကြိတ်ခွဲသည့် ရက်စွဲ</label>
@@ -627,15 +680,15 @@ export default function MillERP() {
                   </div>
                   <div className="flex justify-end gap-2">
                     <button disabled={isLoading} onClick={() => setActiveJobId(null)} className="px-5 py-2.5 bg-white border border-slate-300 rounded-lg font-bold text-sm">ပယ်ဖျက်</button>
-                    <button disabled={isLoading} onClick={() => handleMillDone(job.id)} className="px-5 py-2.5 bg-purple-600 text-white rounded-lg font-bold text-sm shadow-md">ကြိတ်ခွဲမှု စာရင်းသွင်းမည်</button>
+                    <button disabled={isLoading} onClick={() => handleMillDone(job.id)} className="px-5 py-2.5 bg-purple-600 text-white rounded-lg font-bold text-sm shadow-md flex items-center">ကြိတ်ခွဲမှု စာရင်းသွင်းမည်</button>
                   </div>
                 </div>
               ) : (
-                <button onClick={() => setActiveJobId(job.id)} className="w-full mt-2 bg-slate-50 text-purple-700 border border-purple-200 py-2.5 rounded-lg font-bold hover:bg-purple-100 text-sm">ကြိတ်ခွဲမှု ရလဒ်များ သွင်းမည်</button>
+                <button onClick={() => { setActiveJobId(job.id); setMillInput({...millInput, millQty: job.currentQty}); }} className="w-full mt-2 bg-slate-50 text-purple-700 border border-purple-200 py-2.5 rounded-lg font-bold hover:bg-purple-100 text-sm">ကြိတ်ခွဲမှု ရလဒ်များ သွင်းမည်</button>
               )}
             </div>
           ))}
-          {jobs.filter(j => j.status === 'waiting_mill' && j.purpose === 'mill').length === 0 && <div className="p-8 text-center bg-white rounded-2xl border border-slate-200"><p className="text-slate-400 font-bold">ကြိတ်ခွဲရန် စာရင်းမရှိပါ။</p></div>}
+          {filteredJobs.length === 0 && <div className="p-8 text-center bg-white rounded-2xl border border-slate-200"><p className="text-slate-400 font-bold">ကြိတ်ခွဲရန် စာရင်းမရှိပါ (သို့) ရှာဖွေမှု မတွေ့ပါ။</p></div>}
         </div>
       </div>
     );
