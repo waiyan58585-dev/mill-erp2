@@ -218,7 +218,7 @@ export default function MillERP() {
     if (session.role === 'admin') {
       return (
         <div className="animate-in fade-in duration-300">
-          <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><LayoutDashboard className="mr-3 text-blue-600"/> Admin Dashboard (ခြုံငုံသုံးသပ်ချက်)</h2>
+          <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><LayoutDashboard className="mr-3 text-blue-600"/> Admin Dashboard </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
@@ -473,7 +473,7 @@ export default function MillERP() {
         
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm mb-8">
             <div className="p-4 bg-slate-50 border-b border-slate-100 font-bold text-slate-800">
-                ဂိုဒေါင်တွင်း လက်ကျန်စပါး/နဝလီ (စက်ချရန်အသင့်)
+                စပါးစာရင်းမှတ်တမ်း
             </div>
             <table className="w-full text-left">
                 <thead className="bg-slate-100 text-slate-500 text-xs uppercase">
@@ -690,7 +690,7 @@ export default function MillERP() {
                   </div>
                 </div>
               ) : (
-                <button onClick={() => { setActiveJobId(job.id); setMillInput({...millInput, millQty: job.currentQty}); }} className="w-full mt-2 bg-slate-50 text-purple-700 border border-purple-200 py-2.5 rounded-lg font-bold hover:bg-purple-100 text-sm">ကြိတ်ခွဲမှု ရလဒ်များ သွင်းမည်</button>
+                <button onClick={() => { setActiveJobId(job.id); setMillInput({...millInput, millQty: job.currentQty}); }} className="w-full mt-2 bg-slate-50 text-purple-700 border border-purple-200 py-2.5 rounded-lg font-bold hover:bg-purple-100 text-sm">ကြိတ်ခွဲမှု မှတ်တမ်းများ သွင်းမည်</button>
               )}
             </div>
           ))}
@@ -1009,7 +1009,7 @@ export default function MillERP() {
                  <div className="text-3xl font-black text-amber-600">{totalPurchasedByproduct} <span className="text-sm font-medium text-amber-400">အိတ်</span></div>
               </div>
               <div className="border border-red-200 p-5 rounded-xl bg-red-50/50">
-                 <p className="text-red-800 text-xs font-bold mb-2">REJECT ဆန်အမည်း</p>
+                 <p className="text-red-800 text-xs font-bold mb-2">REJECT ဆန်</p>
                  <div className="text-3xl font-black text-red-600">{totalPurchasedReject} <span className="text-sm font-medium text-red-400">အိတ်</span></div>
               </div>
            </div>
