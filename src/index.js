@@ -230,11 +230,11 @@ export default function MillERP() {
               <p className="text-3xl font-black text-slate-800">{totalRiceDeliveredToday} <span className="text-sm font-medium">အိတ်</span></p>
             </div>
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-rose-200">
-              <p className="text-sm font-bold text-rose-600 mb-1">စုစုပေါင်း ဖောက်သည်အကြွေး</p>
+              <p className="text-sm font-bold text-rose-600 mb-1">ရရန်ရှိငွေ စုစုပေါင်း</p>
               <p className="text-3xl font-black text-rose-600">{totalDebt.toLocaleString()} <span className="text-sm font-medium">Ks</span></p>
             </div>
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-200">
-              <p className="text-sm font-bold text-emerald-600 mb-1">စက်မှပြန်ပေးရန်ကျန်သော စာရင်း</p>
+              <p className="text-sm font-bold text-emerald-600 mb-1">ပေးရန်ကျန်ငွေ စုစုပေါင်း</p>
               <p className="text-3xl font-black text-emerald-600">{totalPayable.toLocaleString()} <span className="text-sm font-medium">Ks</span></p>
             </div>
           </div>
@@ -1595,14 +1595,14 @@ export default function MillERP() {
         <div className="flex-1 p-4 space-y-1.5 overflow-y-auto">
           {[
             { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'paddy', 'rice'] },
-            { id: 'gate', name: 'စပါးအဝင်/ဂိတ်', icon: Home, roles: ['admin', 'paddy'] },
-            { id: 'paddy_wh', name: 'စပါး/နဝလီ ဂိုဒေါင်', icon: Warehouse, roles: ['admin', 'paddy'] },
+            { id: 'gate', name: 'စပါးအဝင်စာရင်းသွင်းခြင်း', icon: Home, roles: ['admin', 'paddy'] },
+            { id: 'paddy_wh', name: 'စပါးသိုလှောင်ရုံများ', icon: Warehouse, roles: ['admin', 'paddy'] },
             { id: 'milling', name: 'ကြိတ်ခွဲရေး ဌာန', icon: Tractor, roles: ['admin', 'rice'] },
             { id: 'sorting', name: 'Color Sorting', icon: ScanLine, roles: ['admin', 'rice'] },
-            { id: 'rice_wh', name: 'ဆန်/ထွက်ကုန် ဂိုဒေါင်', icon: Package, roles: ['admin', 'rice'] },
+            { id: 'rice_wh', name: 'ဆန်/ထွက်ကုန် သိုလှောင်ရုံ', icon: Package, roles: ['admin', 'rice'] },
             { id: 'inventory', name: 'စက်ပိုင် ဆန်စာရင်း', icon: PackageCheck, roles: ['admin'] },
             { id: 'pos', name: 'ငွေစာရင်း (POS)', icon: Calculator, roles: ['admin'] },
-            { id: 'customers', name: 'ဖောက်သည် အကြွေး', icon: Users, roles: ['admin'] },
+            { id: 'customers', name: 'ကုန်သည် မှတ်တမ်း', icon: Users, roles: ['admin'] },
             { id: 'opening', name: 'လက်ကျန်စာရင်း (Opening)', icon: FileSpreadsheet, roles: ['admin', 'paddy', 'rice'] }
           ].filter(m => m.roles.includes(session.role)).map(menu => (
             <button key={menu.id} onClick={() => setActiveView(menu.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${activeView === menu.id ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100' : 'text-slate-600 hover:bg-slate-50 border border-transparent'}`}>
