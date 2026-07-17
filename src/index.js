@@ -84,6 +84,11 @@ export default function MillERP() {
      itemType: 'စပါး', qty: '', storage: '', moisture: 'အစို'
   });
 
+  // Mill Owner Sales State (Added for selling mill products)
+  const [salesInput, setSalesInput] = useState({
+     buyerName: '', itemType: 'ဖွဲနု', qty: '', price: '', paidAmount: '', date: getToday()
+  });
+
   useEffect(() => {
     if (!isConfigured) return;
     fetchData();
@@ -811,7 +816,7 @@ export default function MillERP() {
             <tbody className="divide-y divide-slate-100 text-slate-800">
                 {jobs.filter(j => j.status === 'ready_to_bill' || j.status === 'billed').map(job => {
                     const isDryOnly = job.purpose === 'dry_only';
-                    if(isDryOnly) return null; // Rice warehouse doesn't show paddy
+                    if(isDryOnly || job.entryType === 'sale') return null; // Rice warehouse doesn't show paddy or direct sales
 
                     const logs = job.deliveryLogs || [];
                     const labels = getSortingLabels(job.paddyType);
@@ -926,6 +931,56 @@ export default function MillERP() {
         if(os.itemType === 'Reject (အမည်း)') totalPurchasedReject += q;
     });
 
+    // Subtract amounts from Mill Owner Sales
+    const sales = jobs.filter(j => j.entryType === 'sale' && j.ownerType === 'စက်ပိုင်');
+    sales.forEach(sale => {
+        const q = Number(sale.originalQty||0);
+        if(sale.itemType === 'ဆန်အချော') osRice -= q;
+        if(sale.itemType === '၁၂ ဆန်ကွဲ') osB12 -= q;
+        if(sale.itemType === '၂၃၄ ဆန်ကွဲ') osB234 -= q;
+        if(sale.itemType === 'ဖွဲနု') totalPurchasedBran -= q;
+        if(sale.itemType === 'By-product (ဗိုက်ဖြူ/အကြမ်း)') totalPurchasedByproduct -= q;
+        if(sale.itemType === 'Reject (အမည်း)') totalPurchasedReject -= q;
+    });
+
+    const handleSaleSubmit = async (e) => {
+        e.preventDefault();
+        if(!salesInput.buyerName || !salesInput.qty || !salesInput.itemType) return;
+        setIsLoading(true);
+
+        const newId = `SALE-${Date.now().toString().slice(-6)}`;
+        const netTotal = Number(salesInput.qty) * Number(salesInput.price);
+        const paid = Number(salesInput.paidAmount);
+        const balance = netTotal - paid;
+
+        const saleData = {
+            id: newId,
+            entryType: 'sale',
+            ownerType: 'စက်ပိုင်',
+            customer: salesInput.buyerName,
+            itemType: salesInput.itemType,
+            originalQty: Number(salesInput.qty),
+            currentQty: 0,
+            date: salesInput.date,
+            status: 'billed', // Direct to billed status
+            billData: {
+                netTotal: netTotal,
+                paid: paid,
+                balance: balance,
+                billDate: salesInput.date
+            }
+        };
+
+        const { error } = await supabase.from('jobs').insert([saleData]);
+        if (error) {
+            setDialogConfig({title: 'Error', message: error.message, onConfirm: ()=>setDialogConfig(null)});
+        } else {
+            setDialogConfig({title: 'အောင်မြင်ပါသည်', message: 'ရောင်းချမှု ဘောက်ချာ ဖွင့်ပြီးပါပြီ။', onConfirm: ()=>setDialogConfig(null)});
+            setSalesInput({ buyerName: '', itemType: 'ဖွဲနု', qty: '', price: '', paidAmount: '', date: getToday() });
+        }
+        setIsLoading(false);
+    };
+
     return (
       <div className="animate-in fade-in duration-300">
         <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center"><PackageCheck className="mr-3 text-slate-700"/> စက်ပိုင် ဆန်/ဖွဲနု စာရင်း</h2>
@@ -958,6 +1013,52 @@ export default function MillERP() {
                  <div className="text-3xl font-black text-red-600">{totalPurchasedReject} <span className="text-sm font-medium text-red-400">အိတ်</span></div>
               </div>
            </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mt-6">
+           <h3 className="text-sm font-black mb-6 text-blue-800 uppercase tracking-widest flex items-center border-b border-slate-100 pb-3"><Receipt size={18} className="mr-2"/> စက်ပိုင် ပစ္စည်း ရောင်းချရန် (ဘောက်ချာဖွင့်ရန်)</h3>
+           <form onSubmit={handleSaleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                 <label className="block text-xs font-bold text-slate-600 mb-2">ရက်စွဲ</label>
+                 <input type="date" value={salesInput.date} onChange={e=>setSalesInput({...salesInput, date: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-800" required/>
+              </div>
+              <div>
+                 <label className="block text-xs font-bold text-slate-600 mb-2">ဝယ်ယူမည့်သူ အမည်</label>
+                 <input type="text" value={salesInput.buyerName} onChange={e=>setSalesInput({...salesInput, buyerName: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-800" placeholder="အမည်" required/>
+              </div>
+              <div>
+                 <label className="block text-xs font-bold text-slate-600 mb-2">ရောင်းချမည့် ပစ္စည်း</label>
+                 <select value={salesInput.itemType} onChange={e=>setSalesInput({...salesInput, itemType: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-800">
+                    <option value="ဆန်အချော">ဆန်အချော</option>
+                    <option value="၁၂ ဆန်ကွဲ">၁၂ ဆန်ကွဲ</option>
+                    <option value="၂၃၄ ဆန်ကွဲ">၂၃၄ ဆန်ကွဲ</option>
+                    <option value="ဖွဲနု">ဖွဲနု</option>
+                    <option value="By-product (ဗိုက်ဖြူ/အကြမ်း)">By-product (ဗိုက်ဖြူ/အကြမ်း)</option>
+                    <option value="Reject (အမည်း)">Reject (အမည်း)</option>
+                 </select>
+              </div>
+              <div>
+                 <label className="block text-xs font-bold text-slate-600 mb-2">အရေအတွက် (အိတ်)</label>
+                 <input type="number" value={salesInput.qty} onChange={e=>setSalesInput({...salesInput, qty: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-800" required min="1"/>
+              </div>
+              <div>
+                 <label className="block text-xs font-bold text-slate-600 mb-2">နှုန်းထား (၁ အိတ် လျှင်)</label>
+                 <input type="number" value={salesInput.price} onChange={e=>setSalesInput({...salesInput, price: e.target.value})} className="w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-blue-500 font-bold text-slate-800" required placeholder="ကျပ်" min="0"/>
+              </div>
+              <div>
+                 <label className="block text-xs font-bold text-blue-700 mb-2">ပေးချေငွေ (Paid Amount)</label>
+                 <input type="number" value={salesInput.paidAmount} onChange={e=>setSalesInput({...salesInput, paidAmount: e.target.value})} className="w-full p-3 border-2 border-blue-200 rounded-xl outline-none focus:border-blue-500 font-bold text-blue-800 bg-blue-50" required placeholder="ကျပ်" min="0"/>
+              </div>
+              <div className="col-span-1 md:col-span-3 flex justify-end pt-4 border-t border-slate-100">
+                 <div className="flex-1 mr-4 text-right">
+                    <p className="text-xs font-bold text-slate-500 uppercase">စုစုပေါင်း ကျသင့်ငွေ</p>
+                    <p className="text-2xl font-black text-slate-800">{(Number(salesInput.qty) * Number(salesInput.price)).toLocaleString()} <span className="text-sm font-medium">Ks</span></p>
+                 </div>
+                 <button disabled={isLoading} type="submit" className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors flex items-center">
+                    <Receipt size={18} className="mr-2"/> ဘောက်ချာဖွင့်၍ ရောင်းမည်
+                 </button>
+              </div>
+           </form>
         </div>
       </div>
     );
@@ -1392,7 +1493,7 @@ export default function MillERP() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 text-slate-800">
-                            {cust.history.filter(h => (h.status === 'ready_to_bill' || h.status === 'billed' || (h.entryType === 'opening_stock' && h.itemType !== 'စပါး')) && h.purpose !== 'dry_only').map(h => {
+                            {cust.history.filter(h => (h.status === 'ready_to_bill' || h.status === 'billed' || (h.entryType === 'opening_stock' && h.itemType !== 'စပါး')) && h.purpose !== 'dry_only' && h.entryType !== 'sale').map(h => {
                               const labels = getSortingLabels(h.paddyType || h.itemType);
                               return (
                               <tr key={h.id} className="hover:bg-slate-50">
@@ -1421,7 +1522,7 @@ export default function MillERP() {
                                 </td>
                               </tr>
                             )})}
-                            {cust.history.filter(h => (h.status === 'ready_to_bill' || h.status === 'billed' || (h.entryType === 'opening_stock' && h.itemType !== 'စပါး')) && h.purpose !== 'dry_only').length === 0 && (
+                            {cust.history.filter(h => (h.status === 'ready_to_bill' || h.status === 'billed' || (h.entryType === 'opening_stock' && h.itemType !== 'စပါး')) && h.purpose !== 'dry_only' && h.entryType !== 'sale').length === 0 && (
                                <tr><td colSpan="4" className="p-6 text-center text-slate-400 font-bold">မှတ်တမ်းမရှိပါ</td></tr>
                             )}
                           </tbody>
@@ -1449,7 +1550,7 @@ export default function MillERP() {
                                 <td className="p-3">
                                   {h.status === 'payment' ? <span className="text-emerald-600 font-bold">ငွေပေးချေမှု / ကြွေးဆပ်ခြင်း</span> : (
                                     <div>
-                                      <span className="font-bold">{h.paddyType || h.itemType}</span> <span className="text-xs text-slate-400">({h.entryType === 'nawali' ? 'နဝလီ' : h.itemType ? h.itemType : 'စက်ကြိတ်'})</span><br/>
+                                      <span className="font-bold">{h.paddyType || h.itemType}</span> <span className="text-xs text-slate-400">({h.entryType === 'sale' ? 'စက်ပိုင်ပစ္စည်း ဝယ်ယူမှု' : h.entryType === 'nawali' ? 'နဝလီ' : h.itemType ? h.itemType : 'စက်ကြိတ်'})</span><br/>
                                       {h.status === 'billed' ? <span className="text-[10px] text-blue-600 font-bold uppercase mt-1 inline-block">ဘေလ်ရှင်းပြီး</span> : <span className="text-[10px] text-amber-600 font-bold uppercase mt-1 inline-block">ဘေလ်ရှင်းရန်ကျန်</span>}
                                     </div>
                                   )}
